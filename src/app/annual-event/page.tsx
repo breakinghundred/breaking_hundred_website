@@ -202,7 +202,7 @@ export default function AnnualEventPage() {
 
           <div className="testimonial-video">
             <Reveal variants={scaleIn}>
-              <LazyVideo video={testimonial} sizes="(max-width: 700px) 100vw, 420px" />
+              <LazyVideo video={testimonial} sizes="340px" />
             </Reveal>
             <div>
               <Reveal as="span" className="eyebrow" style={{ color: "var(--wine)" }}>

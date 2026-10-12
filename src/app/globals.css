@@ -525,12 +525,12 @@ input:focus-visible {
 .video-facade:focus-visible { outline: 3px solid var(--rose); outline-offset: 3px; }
 .testimonial-video {
   display: grid;
-  grid-template-columns: minmax(0, 420px) 1fr;
+  grid-template-columns: minmax(0, 340px) 1fr;
   gap: 48px;
   align-items: center;
   margin-top: 64px;
 }
-.testimonial-video .video-frame { aspect-ratio: 1 / 1; }
+.testimonial-video .video-frame { aspect-ratio: 9 / 16; }
 
 /* ---------- carousel ---------- */
 .carousel { position: relative; outline: none; }
@@ -604,6 +604,7 @@ input:focus-visible {
   .carousel-stage { aspect-ratio: 4 / 3; }
   .testimonial-video { grid-template-columns: 1fr; }
   .testimonial-video { gap: 28px; margin-top: 40px; }
+  .testimonial-video .video-frame { max-width: 340px; margin-inline: auto; }
   .carousel-arrow { width: 40px; height: 40px; font-size: 1rem; }
   .carousel-arrow.prev { left: 10px; }
   .carousel-arrow.next { right: 10px; }
