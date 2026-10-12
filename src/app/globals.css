@@ -487,6 +487,51 @@ input:focus-visible {
 /* ---------- photography ---------- */
 .photo { position: relative; overflow: hidden; background: var(--plum); }
 
+/* ---------- video ---------- */
+.video-grid { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 14px; }
+.video-grid > * { flex: 1 1 420px; }
+.video-grid > .is-short { flex: 0 1 340px; }
+.video-grid > .is-short .video-frame { aspect-ratio: 9 / 16; }
+.video-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--deep);
+}
+.video-frame iframe, .video-frame video { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.video-facade { padding: 0; border: 0; cursor: pointer; }
+.video-play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  padding-left: 4px;
+  border-radius: 50%;
+  background: var(--wine);
+  color: #fff;
+  font-size: 1.4rem;
+  transform: translate(-50%, -50%);
+  transition: transform 0.3s var(--ease-out-expo), background 0.3s;
+}
+.video-facade:hover .video-play, .video-facade:focus-visible .video-play {
+  background: var(--rose);
+  transform: translate(-50%, -50%) scale(1.08);
+}
+.video-facade:focus-visible { outline: 3px solid var(--rose); outline-offset: 3px; }
+.testimonial-video {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) 1fr;
+  gap: 48px;
+  align-items: center;
+  margin-top: 64px;
+}
+.testimonial-video .video-frame { aspect-ratio: 1 / 1; }
+
 /* ---------- carousel ---------- */
 .carousel { position: relative; outline: none; }
 .carousel:focus-visible .carousel-stage { box-shadow: 0 0 0 3px var(--rose); }
@@ -557,6 +602,8 @@ input:focus-visible {
 @media (max-width: 700px) {
   .wrap { width: min(100% - 36px, 1240px); }
   .carousel-stage { aspect-ratio: 4 / 3; }
+  .testimonial-video { grid-template-columns: 1fr; }
+  .testimonial-video { gap: 28px; margin-top: 40px; }
   .carousel-arrow { width: 40px; height: 40px; font-size: 1rem; }
   .carousel-arrow.prev { left: 10px; }
   .carousel-arrow.next { right: 10px; }

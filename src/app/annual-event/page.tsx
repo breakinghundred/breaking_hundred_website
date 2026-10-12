@@ -9,6 +9,7 @@ import { Faq } from "@/components/Faq";
 import { Closing } from "@/components/Closing";
 import { Carousel, type Slide } from "@/components/Carousel";
 import { Marquee } from "@/components/Marquee";
+import { LazyVideo, type Video } from "@/components/LazyVideo";
 import { scaleIn } from "@/components/motion";
 import { site } from "@/lib/site";
 
@@ -60,6 +61,22 @@ function eventPhotos(): Slide[] {
       alt: `Breaking Hundred Circle annual event, photo ${i + 1}`,
     }));
 }
+
+/**
+ * YouTube IDs are the part after `v=` in a watch URL, or after `youtu.be/` or
+ * `/shorts/`. Set `short: true` for Shorts so they get a portrait frame.
+ */
+const videos: Video[] = [
+  { kind: "youtube", id: "er7WDeWMfkg", title: "Annual event highlights", short: true },
+  { kind: "youtube", id: "rveDM2lNG5I", title: "BHC EEEC 2026 highlights" },
+];
+
+const testimonial: Video = {
+  kind: "file",
+  src: "/videos/testimonial.mp4",
+  poster: "/videos/testimonial-poster.jpg",
+  title: "Testimonial from an annual event attendee",
+};
 
 const faqs = [
   {
@@ -167,6 +184,40 @@ export default function AnnualEventPage() {
       )}
 
       <section className="section alt">
+        <div className="wrap">
+          <div className="section-heading">
+            <Reveal as="span" className="eyebrow">Watch</Reveal>
+            <AnimatedHeading text="See the day for yourself." />
+          </div>
+          <RevealGroup className="video-grid" step={0.09}>
+            {videos.map((video) => (
+              <RevealItem
+                key={video.kind === "youtube" ? video.id : video.src}
+                className={video.kind === "youtube" && video.short ? "is-short" : undefined}
+              >
+                <LazyVideo video={video} sizes="(max-width: 700px) 100vw, 640px" />
+              </RevealItem>
+            ))}
+          </RevealGroup>
+
+          <div className="testimonial-video">
+            <Reveal variants={scaleIn}>
+              <LazyVideo video={testimonial} sizes="(max-width: 700px) 100vw, 420px" />
+            </Reveal>
+            <div>
+              <Reveal as="span" className="eyebrow" style={{ color: "var(--wine)" }}>
+                Testimonial
+              </Reveal>
+              <AnimatedHeading text="In their own words." />
+              <Reveal as="p" delay={0.1}>
+                Hear from someone who was in the room.
+              </Reveal>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
         <div className="wrap">
           <div className="section-heading">
             <Reveal as="span" className="eyebrow">Questions</Reveal>
