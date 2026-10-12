@@ -114,7 +114,7 @@ const faqs = [
 ];
 
 export default function FellowshipPage() {
-  const registerFormRef = site.joinForm;
+  const registerInterest = `mailto:${site.email}?subject=Fellowship%20Cohort%203%20interest`;
   return (
     <>
       <PageHero
@@ -123,7 +123,7 @@ export default function FellowshipPage() {
         intro="A focused, 12-month leadership journey with learning, connection and a real-world capstone. Cohort 3 returns in 2028."
         ghost="12"
         tags={["12 months", "Selective cohort", "Cohort 3 · 2028"]}
-        cta={{ label: "Register your interest", href: registerFormRef }}
+        cta={{ label: "Register your interest", href: registerInterest }}
         stats={[
           { value: "12", label: "Months, start to showcase", to: 12 },
           { value: "6", label: "One-to-one coaching sessions", to: 6 },
@@ -219,7 +219,7 @@ export default function FellowshipPage() {
               year in between to prepare.
             </Reveal>
             <Reveal delay={0.26} style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 8 }}>
-              <a className="button" href={site.joinForm} target="_blank" rel="noopener noreferrer">
+              <a className="button" href={registerInterest}>
                 <span>Register your interest</span>
                 <span className="arrow" aria-hidden>↗</span>
               </a>
@@ -245,7 +245,7 @@ export default function FellowshipPage() {
         eyebrow="Cohort 3 · 2028"
         heading="Twelve months that change what you believe is possible."
         ctaLabel="Register your interest"
-        ctaHref={site.joinForm}
+        ctaHref={registerInterest}
       />
     </>
   );
