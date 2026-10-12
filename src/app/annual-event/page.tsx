@@ -71,12 +71,12 @@ const videos: Video[] = [
   { kind: "youtube", id: "rveDM2lNG5I", title: "BHC EEEC 2026 highlights" },
 ];
 
-const testimonial: Video = {
-  kind: "file",
-  src: "/videos/testimonial.mp4",
-  poster: "/videos/testimonial-poster.jpg",
-  title: "Testimonial from an annual event attendee",
-};
+// const testimonial: Video = {
+//   kind: "file",
+//   // src: "/videos/testimonial.mp4",
+//   poster: "/videos/testimonial-poster.jpg",
+//   title: "Testimonial from an annual event attendee",
+// };
 
 const faqs = [
   {
@@ -201,9 +201,9 @@ export default function AnnualEventPage() {
           </RevealGroup>
 
           <div className="testimonial-video">
-            <Reveal variants={scaleIn}>
+            {/* <Reveal variants={scaleIn}>
               <LazyVideo video={testimonial} sizes="(max-width: 700px) 100vw, 420px" />
-            </Reveal>
+            </Reveal> */}
             <div>
               <Reveal as="span" className="eyebrow" style={{ color: "var(--wine)" }}>
                 Testimonial
