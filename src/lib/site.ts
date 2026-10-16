@@ -1,6 +1,6 @@
 export const site = {
   name: "Breaking Hundred Circle",
-  tagline: "Grow into the leader you’re becoming.",
+  tagline: "Built to lead. Backed to rise.",
   email: "admin@breakinghundred.org",
   privacy: "https://breakinghundred.org/privacy-policy/",
   joinForm: "https://forms.gle/14QYD3aBrbsSgJx67",
@@ -49,7 +49,7 @@ export const offerings = [
 ];
 
 export const method = [
-  { n: "01", name: "Believe", body: "See yourself as the leader you are becoming." },
+  { n: "01", name: "Believe", body: "Ready was never the question" },
   { n: "02", name: "Build", body: "Strengthen the skills and evidence to lead with impact." },
   { n: "03", name: "Belong", body: "Find peers, mentors and a network that sees you." },
   { n: "04", name: "Breakthrough", body: "Step towards the opportunities that matter to you." },

@@ -78,8 +78,8 @@ export function Hero() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.9, ease: EASE, delay: 0.55 }}
           >
-            A leadership community for women from minority ethnic backgrounds to grow in
-            confidence, build influence and open doors for those coming behind.
+            A leadership community for women from minority ethnic backgrounds. 
+            Build influence and open doors for those coming behind.
           </motion.p>
 
           <motion.div

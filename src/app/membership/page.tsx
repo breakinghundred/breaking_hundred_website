@@ -22,33 +22,33 @@ export const metadata: Metadata = {
 const included = [
   {
     tag: "LEARN",
-    title: "Monthly masterclasses",
+    title: "Masterclasses",
     body: "Live sessions on influence, negotiation, board readiness and visibility, recorded so you can catch up in your own time.",
   },
   {
     tag: "CONNECT",
-    title: "Circle conversations",
-    body: "Small-group sessions where members work through real situations with peers who understand the context.",
-  },
-  {
-    tag: "GROW",
-    title: "Mentor introductions",
-    body: "Curated introductions to senior leaders and alumni who have been where you are heading.",
-  },
-  {
-    tag: "BE SEEN",
-    title: "Visibility opportunities",
-    body: "Speaking slots, panels and features that put your expertise in front of the rooms that matter.",
-  },
-  {
-    tag: "RESOURCES",
-    title: "The members' library",
-    body: "Frameworks, templates and session recordings covering the five stages of our method.",
+    title: "Community access",
+    body: "A year-round community of peers who understand the context, so you can work through real situations together.",
   },
   {
     tag: "GATHER",
-    title: "Priority event access",
-    body: "Early booking and member pricing for the annual retreat or conference.",
+    title: "Monthly live events",
+    body: "Regular live gatherings that keep you connected, energised and moving forward between programmes.",
+  },
+  {
+    tag: "GROW",
+    title: "Leadership Academy",
+    body: "Structured learning that builds the skills and confidence to step into senior and executive roles.",
+  },
+  {
+    tag: "RESOURCES",
+    title: "Leadership Library",
+    body: "Frameworks, templates and session recordings covering the five stages of our method.",
+  },
+  {
+    tag: "GUIDANCE",
+    title: "Mentorship opportunities",
+    body: "Connections with senior leaders and alumni who have been where you are heading.",
   },
 ];
 
@@ -68,7 +68,7 @@ const faqs = [
   },
   {
     q: "How much time does it take?",
-    a: "Most members spend two to three hours a month across a masterclass and a Circle conversation. Everything is recorded, so you can stay involved during busier months.",
+    a: "Most members spend two to three hours a month across a masterclass and a monthly live event. Everything is recorded, so you can stay involved during busier months.",
   },
   {
     q: "Is membership the same as the Fellowship?",
@@ -99,7 +99,9 @@ export default function MembershipPage() {
       <PageHero
         eyebrow="The community"
         heading="Membership Circle"
-        intro="Year-round leadership development, peer connection and visibility — built to help you grow into the leader you’re becoming."
+        intro="A leadership community for courageous women to
+grow, connect, and lead with confidence building the
+skills, belief, and network to create lasting impact."
         tags={[
           "Online and in person",
           <Fragment key="price">
@@ -109,7 +111,13 @@ export default function MembershipPage() {
         cta={{ label: "Join the Circle", href: "#join" }}
         stats={[
           { value: "12", label: "Self-led learning modules a year", to: 12 },
-          { value: "299", label: "Per year if you register by 31 October", to: 299, prefix: "£", was: "£499" },
+          {
+            value: "299",
+            label: "Per year if you register by 31 October",
+            to: 299,
+            prefix: "£",
+            was: "£499",
+          },
           { value: "5", label: "Stages of the Circle method", to: 5 },
         ]}
       />
@@ -122,12 +130,14 @@ export default function MembershipPage() {
             </Reveal>
             <AnimatedHeading text={believe.body} />
             <Reveal as="p" delay={0.12}>
-              Every member starts here. Watch two minutes inside the Circle — from believing in
-              the leader you are becoming to the breakthrough that follows.
+              Every member starts here. Watch two minutes inside the Circle.
             </Reveal>
           </div>
           <Reveal variants={scaleIn}>
-            <LazyVideo video={promo} sizes="(max-width: 1288px) 100vw, 1240px" />
+            <LazyVideo
+              video={promo}
+              sizes="(max-width: 1288px) 100vw, 1240px"
+            />
           </Reveal>
         </div>
       </section>
@@ -135,11 +145,13 @@ export default function MembershipPage() {
       <section className="section alt">
         <div className="wrap">
           <div className="section-heading">
-            <Reveal as="span" className="eyebrow">What is included</Reveal>
+            <Reveal as="span" className="eyebrow">
+              What your membership includes
+            </Reveal>
             <AnimatedHeading text="Everything you need to keep moving forward." />
             <Reveal as="p" delay={0.12}>
-              Membership is designed to fit around a demanding career, without losing momentum
-              between formal programmes.
+              Membership is designed to fit around a demanding career, without
+              losing momentum between formal programmes.
             </Reveal>
           </div>
           <RevealGroup className="included" step={0.09}>
@@ -157,20 +169,34 @@ export default function MembershipPage() {
       <section className="section">
         <div className="wrap split">
           <div>
-            <Reveal as="span" className="eyebrow" style={{ color: "var(--wine)" }}>
+            <Reveal
+              as="span"
+              className="eyebrow"
+              style={{ color: "var(--wine)" }}
+            >
               A room that understands
             </Reveal>
             <AnimatedHeading text="You will not have to explain yourself first." />
             <Reveal as="p" delay={0.1}>
-              The hardest part of leadership is rarely the work. It is being the only one in the
-              room, carrying the extra weight of having to prove you belong there.
+              The hardest part of leadership is rarely the work. It is being the
+              only one in the room, carrying the extra weight of having to prove
+              you belong there.
             </Reveal>
             <Reveal as="p" delay={0.18}>
-              In the Circle, that part is already understood. Members arrive and get straight to
-              the question that actually matters: what comes next, and how do we get there.
+              In the Circle, that part is already understood. Members arrive and
+              get straight to the question that actually matters: what comes
+              next, and how do we get there.
             </Reveal>
-            <RevealGroup className="feature-list" step={0.08}>
-              {["Peer accountability groups", "Senior mentor network", "Member-only library", "Annual event priority"].map((f) => (
+            <Reveal as="p" className="checklist-lead" delay={0.24}>
+              This Circle is for women who are:
+            </Reveal>
+            <RevealGroup className="feature-list checklist" step={0.08}>
+              {[
+                "Ready to invest in themselves",
+                "Professionals seeking career growth",
+                "From global majority backgrounds",
+                "Leaders who value community and want to give back",
+              ].map((f) => (
                 <RevealItem key={f}>{f}</RevealItem>
               ))}
             </RevealGroup>
@@ -181,7 +207,6 @@ export default function MembershipPage() {
               alt="Members seated in a circle, deep in conversation"
               sizes="(max-width: 700px) 100vw, 564px"
               style={{ minHeight: 440 }}
-              
             />
           </Reveal>
         </div>
@@ -190,7 +215,9 @@ export default function MembershipPage() {
       <section className="section dark">
         <div className="wrap">
           <div className="section-heading">
-            <Reveal as="span" className="eyebrow">Voices from the Circle</Reveal>
+            <Reveal as="span" className="eyebrow">
+              Voices from the Circle
+            </Reveal>
             <AnimatedHeading text="In their own words." />
           </div>
           <Reveal variants={scaleIn}>
@@ -203,7 +230,9 @@ export default function MembershipPage() {
         <div className="wrap">
           <Reveal className="price-panel" variants={scaleIn}>
             <div>
-              <span className="eyebrow" style={{ color: "var(--gold)" }}>Early-interest rate</span>
+              <span className="eyebrow" style={{ color: "var(--gold)" }}>
+                Early-interest rate
+              </span>
               <div className="price" style={{ marginTop: 14 }}>
                 <Price /> <small>/ year</small>
               </div>
@@ -211,13 +240,15 @@ export default function MembershipPage() {
             </div>
             <div style={{ maxWidth: 420, color: "#e9dce4" }}>
               <p style={{ margin: 0 }}>
-                <strong style={{ color: "#fff" }}>This discount only lasts until the end of this month.</strong>{" "}
-                Register your interest by 31 October to pay <Price />. From 1 November, annual
-                membership is £499.
+                <strong style={{ color: "#fff" }}>
+                  This discount only lasts until the end of this month.
+                </strong>{" "}
+                Register your interest by 31 October to pay <Price />. From 1
+                November, annual membership is £499.
               </p>
               <p style={{ margin: "14px 0 0" }}>
-                One fee, everything included. No joining fee, and you can cancel before renewal at
-                any point in the year.
+                One fee, everything included. No joining fee, and you can cancel
+                before renewal at any point in the year.
               </p>
             </div>
           </Reveal>
@@ -226,13 +257,18 @@ export default function MembershipPage() {
 
       <section className="section" id="join">
         <div className="wrap join">
-          <Reveal as="span" className="eyebrow" style={{ color: "var(--wine)" }}>
+          <Reveal
+            as="span"
+            className="eyebrow"
+            style={{ color: "var(--wine)" }}
+          >
             Join the Circle
           </Reveal>
           <AnimatedHeading text="Request your joining details." />
           <Reveal as="p" delay={0.1} className="muted">
-            Tell us who you are and we will send the joining and payment details, plus what to
-            expect in your first month. Register before 31 October to lock in <Price />.
+            Tell us who you are and we will send the joining and payment
+            details, plus what to expect in your first month. Register before 31
+            October to lock in <Price />.
           </Reveal>
           <JoinForm />
         </div>
@@ -241,7 +277,9 @@ export default function MembershipPage() {
       <section className="section alt">
         <div className="wrap">
           <div className="section-heading">
-            <Reveal as="span" className="eyebrow">Questions</Reveal>
+            <Reveal as="span" className="eyebrow">
+              Questions
+            </Reveal>
             <AnimatedHeading text="Before you join." />
           </div>
           <Faq items={faqs} />

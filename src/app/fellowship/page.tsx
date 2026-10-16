@@ -65,15 +65,15 @@ const included: Included[] = [
     body: "Three days together in the room, marking the start, the midpoint and the finish of your year.",
     points: [
       {
-        title: "September · Launch Day",
+        title: "Launch Day",
         body: "Networking, a guest speaker, leadership assessment, personality profiling and leadership goal setting.",
       },
       {
-        title: "March · Executive Presence Day",
+        title: "Executive Presence Day",
         body: "Gravitas, visibility and communication mastery.",
       },
       {
-        title: "August · Graduation Showcase",
+        title: "Graduation Showcase",
         body: "Present your capstone to a curated audience of sponsors, mentors and stakeholders.",
       },
     ],
@@ -126,7 +126,7 @@ export default function FellowshipPage() {
         cta={{ label: "Register your interest", href: registerInterest }}
         stats={[
           { value: "12", label: "Months, start to showcase", to: 12 },
-          { value: "6", label: "One-to-one coaching sessions", to: 6 },
+          // { value: "6", label: "One-to-one coaching sessions", to: 6 },
           { value: "2028", label: "Cohort 3 begins" },
         ]}
       />
@@ -135,7 +135,7 @@ export default function FellowshipPage() {
         <div className="wrap">
           <div className="section-heading">
             <Reveal as="span" className="eyebrow">How it runs</Reveal>
-            <AnimatedHeading text="Three movements across one year." />
+            <AnimatedHeading text="Three stages across one year." />
             <Reveal as="p" delay={0.12}>
               The Fellowship is deliberately long. Leadership growth that lasts needs time to be
               tested in the real work.

@@ -361,6 +361,10 @@ input:focus-visible {
 
 .feature-list { display: grid; grid-template-columns: 1fr 1fr; gap: 20px 30px; margin: 35px 0; }
 .feature-list > div { padding-top: 17px; border-top: 1px solid var(--line); font-weight: 700; }
+.checklist-lead { margin: 35px 0 0; font-weight: 800; color: var(--wine); }
+.checklist-lead + .feature-list { margin-top: 18px; }
+.feature-list.checklist > div { display: flex; gap: 12px; align-items: flex-start; }
+.feature-list.checklist > div::before { content: "✓"; flex: none; color: var(--wine); font-weight: 800; }
 
 /* ---------- membership / fellowship ---------- */
 .included { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
