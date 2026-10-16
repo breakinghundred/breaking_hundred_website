@@ -6,6 +6,7 @@ import { Method } from "@/components/Method";
 import { Closing } from "@/components/Closing";
 import { AnimatedHeading } from "@/components/AnimatedHeading";
 import { Reveal } from "@/components/Reveal";
+import { Testimonials } from "@/components/Testimonials";
 import { scaleIn } from "@/components/motion";
 import { site } from "@/lib/site";
 
@@ -82,6 +83,18 @@ export default function HomePage() {
               When one woman breaks through, she can hold the door open for many more.
             </blockquote>
             <span>Breaking Hundred Circle</span>
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="section alt">
+        <div className="wrap">
+          <div className="section-heading">
+            <Reveal as="span" className="eyebrow">In their own words</Reveal>
+            <AnimatedHeading text="What women carry home from the Circle." />
+          </div>
+          <Reveal variants={scaleIn}>
+            <Testimonials />
           </Reveal>
         </div>
       </section>

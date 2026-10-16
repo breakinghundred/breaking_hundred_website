@@ -55,3 +55,32 @@ export const method = [
   { n: "04", name: "Breakthrough", body: "Step towards the opportunities that matter to you." },
   { n: "05", name: "Become", body: "Grow your influence and open doors for others." },
 ];
+
+/** Shown in the testimonial carousel. Separate paragraphs with a blank line. */
+export const testimonials = [
+  {
+    name: "Temmy",
+    quote:
+      "The retreat was the best self reflection programme and should be a recurrent event. Every session was not only inspirational but very thought provoking, and with new insight/practical nuggets to reflect on after the sessions.",
+  },
+  {
+    name: "Tola",
+    quote:
+      "I was really impressed by the level of delivery and execution of this leadership retreat. Congratulations to the convener, Funmi, and the planning team. I was also blown away by the gift box — thank you!",
+  },
+  {
+    name: "Sharon",
+    quote:
+      "I just want to say how honoured I feel to have experienced the two-day conference. The value of the insights and inspiration I received far outweighed the cost — it was truly priceless.",
+  },
+  {
+    name: "Rose",
+    quote:
+      "What an honour to be part of this incredible two-day conference. The insights, inspiration and connections I gained far exceeded the cost.\n\nIt was truly priceless. Thank you to the convener, speakers, planning team, and volunteers for creating such an empowering space. Your vision, dedication, and impact will not be forgotten.",
+  },
+  {
+    name: "Ada",
+    quote:
+      "The value of the insights and inspiration I received at the retreat far outweighed the cost, it was truly priceless.\n\nA heartfelt thank you to Funmi Onamusi for stepping out boldly to create such a safe and empowering environment, one where we could all be vulnerable and show up as our authentic selves.",
+  },
+];

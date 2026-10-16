@@ -10,6 +10,7 @@ import { Photo } from "@/components/Photo";
 import { LazyVideo, type Video } from "@/components/LazyVideo";
 import { scaleIn } from "@/components/motion";
 import { Price } from "@/components/Price";
+import { Testimonials } from "@/components/Testimonials";
 import { method } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -182,6 +183,18 @@ export default function MembershipPage() {
               style={{ minHeight: 440 }}
               
             />
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="section dark">
+        <div className="wrap">
+          <div className="section-heading">
+            <Reveal as="span" className="eyebrow">Voices from the Circle</Reveal>
+            <AnimatedHeading text="In their own words." />
+          </div>
+          <Reveal variants={scaleIn}>
+            <Testimonials />
           </Reveal>
         </div>
       </section>

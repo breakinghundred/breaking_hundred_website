@@ -9,6 +9,7 @@ import { Faq } from "@/components/Faq";
 import { Closing } from "@/components/Closing";
 import { Carousel, type Slide } from "@/components/Carousel";
 import { Marquee } from "@/components/Marquee";
+import { Testimonials } from "@/components/Testimonials";
 import { LazyVideo, type Video } from "@/components/LazyVideo";
 import { scaleIn } from "@/components/motion";
 import { site } from "@/lib/site";
@@ -214,6 +215,18 @@ export default function AnnualEventPage() {
               </Reveal>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="section dark">
+        <div className="wrap">
+          <div className="section-heading">
+            <Reveal as="span" className="eyebrow">After the gathering</Reveal>
+            <AnimatedHeading text="Why they want it to happen again." />
+          </div>
+          <Reveal variants={scaleIn}>
+            <Testimonials label="What attendees said about the gathering" />
+          </Reveal>
         </div>
       </section>
 
