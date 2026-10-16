@@ -1,10 +1,10 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { EASE } from "./motion";
 
-export type FaqEntry = { q: string; a: string };
+export type FaqEntry = { q: string; a: ReactNode };
 
 export function Faq({ items }: { items: FaqEntry[] }) {
   const [open, setOpen] = useState<number | null>(0);

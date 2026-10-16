@@ -5,6 +5,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useRef } from "react";
 import { Photo } from "./Photo";
 import { EASE } from "./motion";
+import { site } from "@/lib/site";
 
 export function Hero() {
   const ref = useRef<HTMLElement>(null);
@@ -53,7 +54,7 @@ export function Hero() {
               animate="show"
               variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08, delayChildren: 0.25 } } }}
             >
-              {"Changing who gets to lead.".split(" ").map((word, i) => (
+              {site.tagline.split(" ").map((word, i) => (
                 <span
                   key={i}
                   style={{ display: "inline-block", overflow: "hidden", verticalAlign: "bottom", paddingBottom: "0.06em" }}

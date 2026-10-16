@@ -390,6 +390,16 @@ input:focus-visible {
 .price-was { margin: 12px 0 0; font-size: 0.95rem; color: #dbc8d3; }
 .price-was s { opacity: 0.8; }
 
+.price-pair { white-space: nowrap; }
+.price-pair s {
+  opacity: 0.6;
+  font-size: 0.7em;
+  font-weight: 500;
+  text-decoration-thickness: 0.08em;
+  margin-right: 0.15em;
+}
+.price-now { font-weight: 700; }
+
 .join { max-width: 750px; }
 .join-form { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 30px; }
 .join-form label { display: block; font-weight: 700; font-size: 0.9rem; }

@@ -1,6 +1,6 @@
 export const site = {
   name: "Breaking Hundred Circle",
-  tagline: "Changing who gets to lead.",
+  tagline: "Grow into the leader you’re becoming.",
   email: "admin@breakinghundred.org",
   privacy: "https://breakinghundred.org/privacy-policy/",
   joinForm: "https://forms.gle/14QYD3aBrbsSgJx67",
@@ -10,6 +10,9 @@ export const site = {
   ],
   pillars: ["Believe", "Build", "Belong", "Breakthrough", "Become"],
 };
+
+/** Annual membership price, discounted until the deadline. */
+export const membershipPrice = { was: 499, now: 299, deadline: "31 October" };
 
 export const nav = [
   { href: "/", label: "Our story" },

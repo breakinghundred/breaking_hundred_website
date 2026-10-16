@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { ScrollProgress } from "@/components/ScrollProgress";
+import { site } from "@/lib/site";
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
@@ -22,7 +23,7 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   metadataBase: new URL("https://breakinghundred.org"),
   openGraph: {
-    title: "Changing who gets to lead | Breaking Hundred Circle",
+    title: `${site.tagline.replace(/\.$/, "")} | Breaking Hundred Circle`,
     description:
       "Leadership community, fellowship and annual gatherings for women from minority ethnic backgrounds.",
     url: "/",
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
   twitter: { card: "summary_large_image" },
 
   title: {
-    default: "Changing who gets to lead | Breaking Hundred Circle",
+    default: `${site.tagline.replace(/\.$/, "")} | Breaking Hundred Circle`,
     template: "%s | Breaking Hundred Circle",
   },
   description:

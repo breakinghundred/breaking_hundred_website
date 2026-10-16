@@ -2,11 +2,21 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import type { ReactNode } from "react";
 import { AnimatedHeading } from "./AnimatedHeading";
 import { Counter } from "./Counter";
 import { EASE } from "./motion";
+import { Price } from "./Price";
 
-export type Stat = { value: string; label: string; to?: number; prefix?: string; suffix?: string };
+export type Stat = {
+  value: string;
+  label: string;
+  to?: number;
+  prefix?: string;
+  suffix?: string;
+  /** Full price to show struck through before the value. */
+  was?: string;
+};
 
 export function PageHero({
   eyebrow,
@@ -21,7 +31,7 @@ export function PageHero({
   heading: string;
   intro: string;
   ghost?: string;
-  tags?: string[];
+  tags?: ReactNode[];
   cta?: { label: string; href: string };
   stats?: Stat[];
 }) {
@@ -64,9 +74,9 @@ export function PageHero({
             animate="show"
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.5 } } }}
           >
-            {tags.map((tag) => (
+            {tags.map((tag, i) => (
               <motion.span
-                key={tag}
+                key={i}
                 className="tag"
                 variants={{
                   hidden: { opacity: 0, y: 10 },
@@ -109,11 +119,7 @@ export function PageHero({
                 }}
               >
                 <strong>
-                  {stat.to !== undefined ? (
-                    <Counter to={stat.to} prefix={stat.prefix} suffix={stat.suffix} />
-                  ) : (
-                    stat.value
-                  )}
+                  {stat.was ? <Price was={stat.was} now={statValue(stat)} /> : statValue(stat)}
                 </strong>
                 <span>{stat.label}</span>
               </motion.div>
@@ -122,5 +128,13 @@ export function PageHero({
         )}
       </div>
     </section>
+  );
+}
+
+function statValue(stat: Stat) {
+  return stat.to !== undefined ? (
+    <Counter to={stat.to} prefix={stat.prefix} suffix={stat.suffix} />
+  ) : (
+    stat.value
   );
 }

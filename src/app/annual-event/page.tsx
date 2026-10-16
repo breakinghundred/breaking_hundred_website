@@ -23,7 +23,7 @@ const programme = [
   {
     tag: "MORNING",
     title: "Keynotes and provocations",
-    body: "Leaders who have changed who gets to lead in their own sector, speaking candidly about how they did it.",
+    body: "Leaders who have grown into senior roles in their own sector, speaking candidly about how they did it.",
   },
   {
     tag: "MIDDAY",
