@@ -56,6 +56,12 @@ export function Footer() {
           <span>
             <a href={site.privacy}>Privacy policy</a> · <a href={`mailto:${site.email}`}>{site.email}</a>
           </span>
+          <span>
+            Developed by{" "}
+            <a href="https://www.circleofthreetech.com/" target="_blank" rel="noopener noreferrer">
+              co3
+            </a>
+          </span>
         </div>
       </div>
     </footer>
