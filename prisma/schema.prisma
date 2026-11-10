@@ -1,0 +1,169 @@
+// The Circle member record. One row per member; `status` is the single field
+// every job and webhook filters on. Billing state lives in `subscriptionStatus`
+// so a billing problem never overwrites her place in the journey.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MemberStatus {
+  eoi_registered
+  payment_open
+  paid
+  invited
+  joined_network
+  in_circle
+  academy_complete
+  lapsed
+}
+
+enum SubscriptionStatus {
+  active
+  payment_failed
+  cancelling
+  cancelled
+}
+
+model Member {
+  id                   String              @id @default(cuid())
+  firstName            String
+  lastName             String
+  /// Lower case and trimmed: the match key with Mighty Networks.
+  email                String              @unique
+  emailConsent         Boolean             @default(false)
+  eoiSubmittedAt       DateTime            @default(now())
+  status               MemberStatus        @default(eoi_registered)
+
+  // Payment (only ever written from verified Stripe data)
+  priceTier            String?
+  amount               Int?                // minor units (pence)
+  currency             String?
+  paymentReference     String?             @unique
+  paidAt               DateTime?
+  renewalDate          DateTime?
+  stripeCustomerId     String?             @unique
+  stripeSubscriptionId String?             @unique
+  subscriptionStatus   SubscriptionStatus?
+  failedPaymentCount   Int                 @default(0)
+
+  // Journey timestamps
+  paymentOpenedAt      DateTime?
+  mnInvitedAt          DateTime?
+  mnJoinedAt           DateTime?
+  mnUserId             String?
+  /// Set by the team (alert A1) when she signed up on Mighty Networks with a different email.
+  mnEmail              String?             @unique
+  spacesAddedAt        DateTime?
+  welcomedAt           DateTime?
+
+  // Academy
+  academyProgressPct   Int                 @default(0)
+  academyProgressAt    DateTime?
+  lastMilestoneSent    Int                 @default(0)
+
+  // Reminder caps (one counter per reminder type)
+  paymentReminders     Int                 @default(0)
+  joinReminders        Int                 @default(0)
+  startNudges          Int                 @default(0)
+  progressNudges       Int                 @default(0)
+  progressNudgedAt     DateTime?
+  renewalReminders     Int                 @default(0)
+  followUpFlag         Boolean             @default(false)
+  followUpReason       String?
+
+  // Become
+  contributorTrack     String?
+  contributorNote      String?
+  contributorAt        DateTime?
+  mentorMatched        Boolean             @default(false)
+
+  notes                String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  emails               EmailLog[]
+
+  @@index([status])
+}
+
+/// One line per email sent. The unique key makes every send idempotent:
+/// a repeated webhook or job run cannot send the same email twice.
+model EmailLog {
+  id         String   @id @default(cuid())
+  memberId   String?
+  member     Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  templateId String
+  /// Distinguishes legitimate repeats (e.g. "3d"/"7d", an invoice id).
+  sendKey    String   @default("")
+  toEmail    String
+  resendId   String?
+  scheduledAt DateTime?
+  sentAt     DateTime @default(now())
+
+  @@unique([memberId, templateId, sendKey])
+  @@index([templateId])
+}
+
+/// Stripe events already processed (webhook idempotency).
+model StripeEvent {
+  id          String   @id
+  type        String
+  processedAt DateTime @default(now())
+}
+
+/// Mighty Networks webhook deliveries already processed.
+model MightyEvent {
+  id          String   @id
+  type        String
+  /// Raw delivery, kept so event names and fields can be checked against live data.
+  payload     Json?
+  processedAt DateTime @default(now())
+}
+
+/// Admin alerts A1–A4, also emailed to the team inbox.
+model Alert {
+  id         String    @id @default(cuid())
+  code       String    // A1 | A2 | A3 | A4
+  summary    String
+  detail     Json?
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+/// Daily job runs, so the go-live check "jobs running and logged" is visible.
+model JobRun {
+  id         String   @id @default(cuid())
+  job        String
+  result     Json?
+  ok         Boolean  @default(true)
+  startedAt  DateTime @default(now())
+}
+
+/// Key/value settings the team edits in /admin (onboarding call date, links).
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+/// Interest-form submissions per client (hashed IP), for rate limiting.
+model FormAttempt {
+  id        String   @id @default(cuid())
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([key, createdAt])
+}
+
+/// Team edits to the email catalogue. No row = the built-in wording in src/lib/email/templates.ts.
+model EmailTemplate {
+  id        String   @id // C01–C18
+  subject   String
+  body      String
+  updatedAt DateTime @updatedAt
+}

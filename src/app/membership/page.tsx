@@ -9,7 +9,6 @@ import { Closing } from "@/components/Closing";
 import { Photo } from "@/components/Photo";
 import { LazyVideo, type Video } from "@/components/LazyVideo";
 import { scaleIn } from "@/components/motion";
-import { Price } from "@/components/Price";
 import { Testimonials } from "@/components/Testimonials";
 import { method } from "@/lib/site";
 
@@ -79,17 +78,12 @@ const faqs = [
     a: "Yes. Many members are sponsored through a learning and development budget. Request joining details and we will send an invoice addressed to your organisation.",
   },
   {
-    q: "How long does the discounted rate last?",
-    a: (
-      <>
-        Only until the end of October. Register your interest by 31 October and you pay{" "}
-        <Price /> for your first year. From 1 November, annual membership is £499.
-      </>
-    ),
+    q: "When do I pay?",
+    a: "Register your interest below. Membership opens on 21 November, when we email you a personal link to pay £299 for 12 months. It renews automatically each year and you can cancel online at any time before your renewal date.",
   },
   {
     q: "How do I pay?",
-    a: "Request the joining details below and the team will send payment instructions along with your welcome pack.",
+    a: "By card, securely through Stripe on our website, using the personal link in your email. You can pay in pounds from any country.",
   },
 ];
 
@@ -104,19 +98,16 @@ grow, connect, and lead with confidence building the
 skills, belief, and network to create lasting impact."
         tags={[
           "Online and in person",
-          <Fragment key="price">
-            <Price /> if you register by 31 October
-          </Fragment>,
+          <Fragment key="price">£299 for 12 months</Fragment>,
         ]}
         cta={{ label: "Join the Circle", href: "#join" }}
         stats={[
           { value: "12", label: "Self-led learning modules a year", to: 12 },
           {
             value: "299",
-            label: "Per year if you register by 31 October",
+            label: "For 12 months of membership",
             to: 299,
             prefix: "£",
-            was: "£499",
           },
           { value: "5", label: "Stages of the Circle method", to: 5 },
         ]}
@@ -231,20 +222,20 @@ skills, belief, and network to create lasting impact."
           <Reveal className="price-panel" variants={scaleIn}>
             <div>
               <span className="eyebrow" style={{ color: "var(--gold)" }}>
-                Early-interest rate
+                Membership
               </span>
               <div className="price" style={{ marginTop: 14 }}>
-                <Price /> <small>/ year</small>
+                £299 <small>/ 12 months</small>
               </div>
-              <p className="price-was">Ends 31 October</p>
+              <p className="price-was">Payment opens 21 November</p>
             </div>
             <div style={{ maxWidth: 420, color: "#e9dce4" }}>
               <p style={{ margin: 0 }}>
                 <strong style={{ color: "#fff" }}>
-                  This discount only lasts until the end of this month.
+                  Register your interest now.
                 </strong>{" "}
-                Register your interest by 31 October to pay <Price />. From 1
-                November, annual membership is £499.
+                Your personal payment link arrives by 21 November, and we hold
+                an onboarding call in December.
               </p>
               <p style={{ margin: "14px 0 0" }}>
                 One fee, everything included. No joining fee, and you can cancel
@@ -264,11 +255,11 @@ skills, belief, and network to create lasting impact."
           >
             Join the Circle
           </Reveal>
-          <AnimatedHeading text="Request your joining details." />
+          <AnimatedHeading text="Register your interest." />
           <Reveal as="p" delay={0.1} className="muted">
-            Tell us who you are and we will send the joining and payment
-            details, plus what to expect in your first month. Register before 31
-            October to lock in <Price />.
+            Tell us who you are and we will email your personal payment link by
+            21 November, plus what to expect in your first month. Membership is
+            £299 for 12 months.
           </Reveal>
           <JoinForm />
         </div>
@@ -287,7 +278,7 @@ skills, belief, and network to create lasting impact."
       </section>
 
       <Closing
-        eyebrow="Membership is now open"
+        eyebrow="Payment opens 21 November"
         heading="The Circle is stronger with you in it."
         ctaLabel="Join the Circle"
         ctaHref="#join"

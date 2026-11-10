@@ -3,7 +3,6 @@ export const site = {
   tagline: "Built to lead. Backed to rise.",
   email: "admin@breakinghundred.org",
   privacy: "https://breakinghundred.org/privacy-policy/",
-  joinForm: "https://forms.gle/14QYD3aBrbsSgJx67",
   socials: [
     { label: "Instagram", href: "https://www.instagram.com/breakinghundredcircle/" },
     { label: "LinkedIn", href: "https://www.linkedin.com/company/breakinghundredcircle/" },
