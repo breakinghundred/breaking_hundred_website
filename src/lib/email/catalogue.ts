@@ -12,7 +12,7 @@ export const TEMPLATE_INFO: Record<TemplateId, { name: string; trigger: string; 
   C01: { name: "Your place in The Circle", trigger: "Interest form submitted, immediately" },
   C02: { name: "Membership is now open", trigger: "Admin runs Open payments" },
   C03: { name: "Your place is waiting", trigger: "Still unpaid 3 and 7 days after C02" },
-  C04: { name: "Payment confirmed", trigger: "Verified Stripe payment, immediately" },
+  C04: { name: "Payment confirmed", trigger: "Verified Stripe payment, or the team marks her paid in /admin" },
   C05: { name: "Join The Circle on Mighty Networks", trigger: "5 minutes after C04" },
   C06: { name: "Reminder: join the platform", trigger: "Not joined 48 hours and 5 days after C05" },
   C07: { name: "Welcome to The Circle", trigger: "Added to her spaces, immediately" },
@@ -27,6 +27,9 @@ export const TEMPLATE_INFO: Record<TemplateId, { name: string; trigger: string; 
   C16: { name: "Renewal payment did not go through", trigger: "Each failed renewal attempt", extra: ["retry_line"] },
   C17: { name: "Cancellation confirmed", trigger: "Member cancels in the billing portal" },
   C18: { name: "Membership has renewed", trigger: "Paid renewal (provisional wording)" },
+  C19: { name: "Payment not received", trigger: "The team marks her as not paid in /admin" },
+  C20: { name: "Payments up to date", trigger: "The team marks her payments as up to date in /admin" },
+  C21: { name: "Membership has ended", trigger: "The team ends her membership in /admin" },
 };
 
 /** Merge fields available in every email, with what they contain. */

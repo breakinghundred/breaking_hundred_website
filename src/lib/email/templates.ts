@@ -290,6 +290,40 @@ export const templates = {
       kindTeam,
     ],
   }),
+
+  // Sent when the team changes a payment status by hand in /admin.
+  C19: (v) => ({
+    subject: "Your Circle payment has not been received",
+    blocks: [
+      `Dear ${v.first_name},`,
+      "We have updated your membership record: our records show that your membership payment has not been received, so your place in The Circle is not yet confirmed.",
+      `To complete your membership, use your personal link: ${v.payment_link}`,
+      "If you think this is a mistake, or you have already paid, please reply to this email and we will put it right.",
+      team,
+    ],
+  }),
+
+  C20: (v) => ({
+    subject: "Your Circle payments are up to date",
+    blocks: [
+      `Dear ${v.first_name},`,
+      "Good news: we have updated your membership record and your payments are now up to date. Your access to The Circle continues as normal.",
+      `Your next renewal date is ${v.renewal_date}.`,
+      "If you have any questions, reply to this email and we will help.",
+      kindTeam,
+    ],
+  }),
+
+  C21: (v) => ({
+    subject: "Your Circle membership has ended",
+    blocks: [
+      `Dear ${v.first_name},`,
+      "We have updated your membership record: your membership of The Circle has now ended, and your access to the member spaces has been removed.",
+      "If you think this is a mistake, or you would like to rejoin, please reply to this email and we will help.",
+      "Thank you for being part of The Circle.",
+      kindTeam,
+    ],
+  }),
 } satisfies Record<string, Template>;
 
 export type TemplateId = keyof typeof templates;

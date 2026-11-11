@@ -5,41 +5,33 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/dates";
 import { countryName } from "@/lib/countries";
+import { paymentChangesFor } from "@/lib/members";
 import { mightyConfigured } from "@/lib/mighty";
-import { SETTING_FIELDS, getSettings } from "@/lib/settings";
 import { ActionForm } from "./ActionForm";
+import { PaymentStatusForm } from "./PaymentStatusForm";
 import { signOut } from "./login/actions";
+import { ALERT_TITLES, STAGES, STAGE_ORDER, billingLabel, plain } from "./labels";
 import {
-  importAction,
   memberAction,
   openPaymentsAction,
   resolveAlertAction,
-  runJobsAction,
-  saveSettingsAction,
 } from "./actions";
 
-export const metadata: Metadata = { title: "Circle admin", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Circle dashboard", robots: { index: false, follow: false } };
 
-const STATUSES: MemberStatus[] = [
-  "eoi_registered",
-  "payment_open",
-  "paid",
-  "invited",
-  "joined_network",
-  "in_circle",
-  "academy_complete",
-  "lapsed",
-];
+const PAYING = new Set<MemberStatus>(["paid", "invited", "joined_network", "in_circle", "academy_complete"]);
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ status?: string; flag?: string; q?: string }> }) {
   await requireAdmin();
   const { status, flag, q } = await searchParams;
-  const filterStatus = STATUSES.includes(status as MemberStatus) ? (status as MemberStatus) : undefined;
+  const filterStatus = STAGE_ORDER.includes(status as MemberStatus) ? (status as MemberStatus) : undefined;
+  const auto = mightyConfigured();
 
-  const [counts, flagged, alerts, members, settings, jobs, mightyEvents] = await Promise.all([
+  const [counts, alerts, needSpaces, flagged, members, jobs] = await Promise.all([
     db().member.groupBy({ by: ["status"], _count: true }),
-    db().member.count({ where: { followUpFlag: true } }),
     db().alert.findMany({ where: { resolvedAt: null }, orderBy: { createdAt: "desc" }, take: 50 }),
+    db().member.findMany({ where: { status: "joined_network" }, orderBy: { mnJoinedAt: "asc" }, take: 50 }),
+    db().member.findMany({ where: { followUpFlag: true }, orderBy: { updatedAt: "desc" }, take: 50 }),
     db().member.findMany({
       where: {
         ...(filterStatus ? { status: filterStatus } : {}),
@@ -58,195 +50,274 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       orderBy: { updatedAt: "desc" },
       take: 300,
     }),
-    getSettings(),
-    db().jobRun.findMany({ orderBy: { startedAt: "desc" }, take: 5 }),
-    db().mightyEvent.findMany({ orderBy: { processedAt: "desc" }, take: 5 }),
+    db().jobRun.findMany({ orderBy: { startedAt: "desc" }, take: 1 }),
   ]);
   const count = (s: MemberStatus) => counts.find((c) => c.status === s)?._count ?? 0;
+  const total = counts.reduce((n, c) => n + c._count, 0);
+  const waiting = count("eoi_registered");
+  const paying = [...PAYING].reduce((n, s) => n + count(s), 0);
+  const todo = alerts.length + needSpaces.length + flagged.length;
+  const lastRun = jobs[0];
 
   return (
     <section className="section flow-page admin">
       <div className="wrap">
-        <span className="eyebrow" style={{ color: "var(--wine)" }}>The Circle</span>
-        <h1 className="flow-title">Member admin</h1>
-        <div className="admin-bar small">
-          <Link href="/admin/emails">Edit email templates →</Link>
-          <form action={signOut}>
-            <button type="submit" className="link-btn">Sign out</button>
-          </form>
-        </div>
-
-        <nav className="admin-pills" aria-label="Filter by status">
-          <Link href="/admin" className={!filterStatus && !flag ? "on" : ""}>All</Link>
-          {STATUSES.map((s) => (
-            <Link key={s} href={`/admin?status=${s}`} className={filterStatus === s ? "on" : ""}>
-              {s} <b>{count(s)}</b>
-            </Link>
-          ))}
-          <Link href="/admin?flag=1" className={flag ? "on" : ""}>follow up <b>{flagged}</b></Link>
-        </nav>
-
-        <div className="admin-grid">
-          <div className="flow-card">
-            <h3>Open payments</h3>
-            <p className="muted small">
-              Sets every <code>eoi_registered</code> member to <code>payment_open</code> and sends C02 with her personal
-              link. Run on 21 November. {count("eoi_registered")} waiting.
-            </p>
-            <ActionForm action={openPaymentsAction} confirm={`Send C02 to ${count("eoi_registered")} members now?`}>
-              <button className="button" type="submit"><span>Open payments</span></button>
-            </ActionForm>
+        <header className="dash-head">
+          <div>
+            <span className="eyebrow" style={{ color: "var(--wine)" }}>The Circle</span>
+            <h1 className="flow-title">Dashboard</h1>
+            <p className="muted">Everyone who has signed up, where they are, and anything that needs you.</p>
           </div>
-          <div className="flow-card">
-            <h3>Daily jobs</h3>
-            <p className="muted small">
-              Run automatically each morning. Last run:{" "}
-              {jobs[0] ? `${jobs[0].startedAt.toLocaleString("en-GB")} (${jobs[0].ok ? "ok" : "errors"})` : "never"}.
-            </p>
-            <ActionForm action={runJobsAction}>
-              <button className="button outline" type="submit"><span>Run now</span></button>
-            </ActionForm>
-          </div>
-          <div className="flow-card">
-            <h3>Mighty Networks</h3>
-            <p className="muted small">
-              Admin API: {mightyConfigured() ? "connected" : "not configured, so spaces are added by hand"}. Last webhook:{" "}
-              {mightyEvents[0] ? `${mightyEvents[0].type} at ${mightyEvents[0].processedAt.toLocaleString("en-GB")}` : "none yet"}.
-            </p>
-          </div>
-        </div>
+          <nav className="dash-links" aria-label="Admin">
+            <Link href="/admin/emails" className="button outline small"><span>Edit email wording</span></Link>
+            <Link href="/admin/settings" className="button outline small"><span>Settings</span></Link>
+            <form action={signOut}>
+              <button type="submit" className="link-btn">Sign out</button>
+            </form>
+          </nav>
+        </header>
 
-        {alerts.length > 0 && (
-          <>
-            <h2 className="admin-h">Open alerts</h2>
-            <ul className="admin-alerts">
-              {alerts.map((a) => (
-                <li key={a.id}>
-                  <strong>{a.code}</strong> {a.summary}{" "}
-                  <span className="muted small">{a.createdAt.toLocaleString("en-GB")}</span>
-                  <ActionForm action={resolveAlertAction} className="inline">
-                    <input type="hidden" name="id" value={a.id} />
-                    <button type="submit" className="link-btn">Resolve</button>
-                  </ActionForm>
-                </li>
-              ))}
-            </ul>
-          </>
+        {lastRun && !lastRun.ok && (
+          <p className="warn small">
+            The last automatic email check had a problem. <Link href="/admin/settings#automatic">Open Settings</Link> to run it again.
+          </p>
         )}
 
-        <h2 className="admin-h">Members ({members.length})</h2>
-        <form className="admin-search">
-          {filterStatus && <input type="hidden" name="status" value={filterStatus} />}
-          <input name="q" placeholder="Search name, email or phone" defaultValue={q} />
-          <button className="link-btn" type="submit">Search</button>
-        </form>
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Member</th>
-                <th>Status</th>
-                <th>Paid</th>
-                <th>Renews</th>
-                <th>Billing</th>
-                <th>Academy</th>
-                <th>Flags</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((m) => (
-                <tr key={m.id}>
-                  <td>
-                    {m.firstName} {m.lastName}
-                    <br />
-                    <span className="muted small">{m.email}{m.mnEmail ? ` · MN: ${m.mnEmail}` : ""}</span>
-                    {(m.phone || m.country) && (
-                      <>
-                        <br />
-                        <span className="muted small">{[m.phone, countryName(m.country)].filter(Boolean).join(" · ")}</span>
-                      </>
-                    )}
-                  </td>
-                  <td><code>{m.status}</code></td>
-                  <td>{m.paidAt ? formatDate(m.paidAt) : ""}<br /><span className="muted small">{m.paymentReference}</span></td>
-                  <td>{formatDate(m.renewalDate)}</td>
-                  <td>{m.subscriptionStatus ?? ""}</td>
-                  <td>{m.academyProgressPct}%</td>
-                  <td className="small">
-                    {m.followUpFlag && <div>⚑ {m.followUpReason}</div>}
-                    {m.contributorTrack && <div>Contributor: {m.contributorTrack}</div>}
-                    {m.mentorMatched && <div>Mentor matched</div>}
-                  </td>
-                  <td className="admin-actions">
-                    {m.status === "joined_network" && (
-                      <>
-                        <ActionForm action={memberAction} className="inline">
-                          <input type="hidden" name="id" value={m.id} />
-                          <button name="op" value="retry-spaces" className="link-btn">Retry spaces</button>
-                        </ActionForm>
-                        <ActionForm action={memberAction} className="inline" confirm="Have you added her to all five private spaces?">
-                          <input type="hidden" name="id" value={m.id} />
-                          <button name="op" value="spaces-added" className="link-btn">Spaces added</button>
-                        </ActionForm>
-                      </>
-                    )}
-                    {(m.status === "paid" || m.status === "invited" || m.status === "joined_network") && (
-                      <ActionForm action={memberAction} className="inline">
-                        <input type="hidden" name="id" value={m.id} />
-                        <input name="mnEmail" placeholder="Mighty email (A1)" className="admin-input" />
-                        <button name="op" value="link-mighty" className="link-btn">Link</button>
-                      </ActionForm>
-                    )}
-                    {m.contributorTrack?.includes("Mentor") && (
-                      <ActionForm action={memberAction} className="inline">
-                        <input type="hidden" name="id" value={m.id} />
-                        <button name="op" value="mentor" className="link-btn">{m.mentorMatched ? "Unmark mentor" : "Mentor matched"}</button>
-                      </ActionForm>
-                    )}
-                    {m.followUpFlag && (
-                      <ActionForm action={memberAction} className="inline">
-                        <input type="hidden" name="id" value={m.id} />
-                        <button name="op" value="clear-flag" className="link-btn">Clear flag</button>
-                      </ActionForm>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* At a glance */}
+        <div className="dash-tiles">
+          <Link href="/admin" className="tile">
+            <b>{total}</b>
+            <span>People in total</span>
+          </Link>
+          <div className="tile">
+            <b>{waiting + count("payment_open")}</b>
+            <span>Interested, not paid yet</span>
+          </div>
+          <div className="tile">
+            <b>{paying}</b>
+            <span>Paying members</span>
+          </div>
+          <a href="#todo" className={`tile ${todo ? "attention" : "calm"}`}>
+            <b>{todo}</b>
+            <span>{todo === 1 ? "Thing needs you" : "Things need you"}</span>
+          </a>
         </div>
 
-        <div className="admin-grid two">
-          <div className="flow-card">
-            <h3>Merge links and onboarding call</h3>
-            <ActionForm action={saveSettingsAction} className="admin-settings">
-              {SETTING_FIELDS.map((f) => (
-                <label key={f.key}>
-                  {f.label}
-                  <input
-                    name={f.key}
-                    type={"type" in f ? f.type : "url"}
-                    defaultValue={settings[f.key]}
-                    className="admin-input"
-                  />
-                </label>
-              ))}
-              <button className="button" type="submit"><span>Save</span></button>
+        {/* Send payment links: only shown while people are waiting */}
+        {waiting > 0 && (
+          <div className="flow-card dash-callout">
+            <div>
+              <h3>
+                {waiting} {waiting === 1 ? "person is" : "people are"} waiting for a payment link
+              </h3>
+              <p className="muted small">
+                Pressing the button emails each of them their own link to pay and join. Do this on the day payments
+                open (21 November). Anyone who registers later is included the next time you press it.
+              </p>
+            </div>
+            <ActionForm action={openPaymentsAction} confirm={`Email a payment link to ${waiting} ${waiting === 1 ? "person" : "people"} now?`}>
+              <button className="button" type="submit"><span>Send payment links</span></button>
             </ActionForm>
           </div>
-          <div className="flow-card">
-            <h3>Import the existing interest list</h3>
-            <p className="muted small">
-              Paste one person per line: <code>first name, last name, email</code>. Emails are lower-cased and duplicates
-              merged into existing records. No email is sent; they get C02 when you open payments.
-            </p>
-            <ActionForm action={importAction} className="admin-settings">
-              <textarea name="csv" rows={10} className="textarea" placeholder={"Ada,Okafor,ada@example.com"} />
-              <button className="button outline" type="submit"><span>Import</span></button>
-            </ActionForm>
+        )}
+
+        {/* To do */}
+        <h2 className="admin-h" id="todo">Needs your attention</h2>
+        {todo === 0 ? (
+          <p className="dash-clear">All clear. Nothing needs you right now.</p>
+        ) : (
+          <ul className="todo-list">
+            {needSpaces.map((m) => (
+              <li key={m.id} className="todo">
+                <div>
+                  <strong>Add {m.firstName} {m.lastName} to the private spaces</strong>
+                  <p className="muted small">
+                    She has paid and joined Mighty Networks{auto ? ", but we could not add her automatically" : ""}. On
+                    Mighty Networks, add {m.mnEmail ?? m.email} to the five private spaces (Academy, Library, Community,
+                    Monthly Live and Partner Directory), then press <em>Spaces added</em>. That sends her welcome email.
+                  </p>
+                </div>
+                <div className="todo-actions">
+                  <ActionForm action={memberAction} confirm={`Have you added ${m.firstName} to all five private spaces?`}>
+                    <input type="hidden" name="id" value={m.id} />
+                    <button name="op" value="spaces-added" className="button small"><span>Spaces added</span></button>
+                  </ActionForm>
+                  {auto && (
+                    <ActionForm action={memberAction}>
+                      <input type="hidden" name="id" value={m.id} />
+                      <button name="op" value="retry-spaces" className="link-btn">Try automatically again</button>
+                    </ActionForm>
+                  )}
+                </div>
+              </li>
+            ))}
+            {flagged.map((m) => (
+              <li key={m.id} className="todo">
+                <div>
+                  <strong>Get in touch with {m.firstName} {m.lastName}</strong>
+                  <p className="muted small">
+                    {m.followUpReason ?? "Flagged for a personal follow-up"}. The automatic reminders have stopped, so a
+                    personal message may help. {m.email}
+                    {m.phone ? ` · ${m.phone}` : ""}
+                  </p>
+                </div>
+                <div className="todo-actions">
+                  <ActionForm action={memberAction}>
+                    <input type="hidden" name="id" value={m.id} />
+                    <button name="op" value="clear-flag" className="button small outline"><span>Done</span></button>
+                  </ActionForm>
+                </div>
+              </li>
+            ))}
+            {alerts.map((a) => (
+              <li key={a.id} className="todo">
+                <div>
+                  <strong>{ALERT_TITLES[a.code] ?? "Something needs checking"}</strong>
+                  <p className="muted small">
+                    {plain(a.summary)}{" "}
+                    <span className="nowrap">({a.createdAt.toLocaleDateString("en-GB", { day: "numeric", month: "short" })})</span>
+                  </p>
+                </div>
+                <div className="todo-actions">
+                  <ActionForm action={resolveAlertAction}>
+                    <input type="hidden" name="id" value={a.id} />
+                    <button type="submit" className="button small outline"><span>Done</span></button>
+                  </ActionForm>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Members */}
+        <h2 className="admin-h">Members</h2>
+        <nav className="admin-pills" aria-label="Show members by stage">
+          <Link href="/admin" className={!filterStatus && !flag ? "on" : ""}>
+            Everyone <b>{total}</b>
+          </Link>
+          {STAGE_ORDER.map((s) => (
+            <Link key={s} href={`/admin?status=${s}`} className={filterStatus === s ? "on" : ""} title={STAGES[s].help}>
+              {STAGES[s].label} <b>{count(s)}</b>
+            </Link>
+          ))}
+          <Link href="/admin?flag=1" className={flag ? "on" : ""}>
+            To follow up <b>{flagged.length}</b>
+          </Link>
+        </nav>
+        {filterStatus && <p className="muted small">{STAGES[filterStatus].help}</p>}
+
+        <form className="admin-search" role="search">
+          {filterStatus && <input type="hidden" name="status" value={filterStatus} />}
+          <input name="q" placeholder="Search by name, email or phone" defaultValue={q} aria-label="Search members" />
+          <button className="button small" type="submit"><span>Search</span></button>
+          {q && (
+            <Link href={filterStatus ? `/admin?status=${filterStatus}` : "/admin"} className="small">
+              Clear
+            </Link>
+          )}
+        </form>
+
+        {members.length === 0 ? (
+          <p className="dash-clear">{q ? `Nobody matches “${q}”.` : "Nobody here yet."}</p>
+        ) : (
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Stage</th>
+                  <th>Signed up</th>
+                  <th>Paid</th>
+                  <th>Renews</th>
+                  <th>Academy</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {members.map((m) => {
+                  const stage = STAGES[m.status];
+                  const inCircle = m.status === "in_circle" || m.status === "academy_complete";
+                  return (
+                    <tr key={m.id}>
+                      <td>
+                        <Link href={`/admin/members/${m.id}`} className="member-link">
+                          <strong>
+                            {`${m.firstName} ${m.lastName}`.trim() || m.email}
+                          </strong>
+                        </Link>
+                        <div className="muted small">{m.email}</div>
+                        {(m.phone || m.country) && (
+                          <div className="muted small">{[m.phone, countryName(m.country)].filter(Boolean).join(" · ")}</div>
+                        )}
+                        {m.mnEmail && <div className="muted small">Platform email: {m.mnEmail}</div>}
+                      </td>
+                      <td data-label="Stage">
+                        <span className={`badge ${stage.tone}`}>{stage.label}</span>
+                        <div className="muted small stage-help">{stage.help}</div>
+                      </td>
+                      <td className="nowrap" data-label="Signed up">{formatDate(m.createdAt)}</td>
+                      <td data-label="Paid">
+                        <Link href={`/admin/members/${m.id}`} className="nowrap">{m.paidAt ? formatDate(m.paidAt) : "Not paid"}</Link>
+                        {m.priceTier === "manual" && <div className="muted small">Recorded by the team</div>}
+                        <details className="mini">
+                          <summary>Change payment status</summary>
+                          <PaymentStatusForm id={m.id} name={`${m.firstName} ${m.lastName}`.trim()} options={paymentChangesFor(m.status)} />
+                        </details>
+                      </td>
+                      <td className="nowrap" data-label="Renews">
+                        {m.renewalDate ? formatDate(m.renewalDate) : "—"}
+                        {m.subscriptionStatus && m.subscriptionStatus !== "active" && (
+                          <div className={`small ${m.subscriptionStatus === "payment_failed" ? "warn" : "muted"}`}>
+                            {billingLabel(m.subscriptionStatus)}
+                          </div>
+                        )}
+                      </td>
+                      <td data-label="Academy">
+                        {inCircle ? (
+                          <div className="progress" title={`${m.academyProgressPct}% complete`}>
+                            <span style={{ width: `${m.academyProgressPct}%` }} />
+                            <em>{m.academyProgressPct}%</em>
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="small notes">
+                        {m.followUpFlag && <div className="warn">Needs a personal follow-up</div>}
+                        {m.contributorTrack && <div>Wants to contribute: {m.contributorTrack}</div>}
+                        {m.contributorTrack?.includes("Mentor") && (
+                          <ActionForm action={memberAction}>
+                            <input type="hidden" name="id" value={m.id} />
+                            <button name="op" value="mentor" className="link-btn">
+                              {m.mentorMatched ? "Mentor matched ✓ (undo)" : "Mark mentor matched"}
+                            </button>
+                          </ActionForm>
+                        )}
+                        {(m.status === "paid" || m.status === "invited" || m.status === "joined_network") && (
+                          <details className="mini">
+                            <summary>Joined the platform with a different email?</summary>
+                            <ActionForm action={memberAction} className="inline">
+                              <input type="hidden" name="id" value={m.id} />
+                              <input
+                                name="mnEmail"
+                                type="email"
+                                placeholder="Email she used there"
+                                className="admin-input"
+                                aria-label="Email she used on Mighty Networks"
+                              />
+                              <button name="op" value="link-mighty" className="link-btn">Link</button>
+                            </ActionForm>
+                          </details>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
+
       </div>
     </section>
   );

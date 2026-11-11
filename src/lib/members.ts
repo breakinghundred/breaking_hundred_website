@@ -1,8 +1,8 @@
 import "server-only";
-import type { Member } from "@/generated/prisma/client";
+import { Prisma, type Member, type MemberStatus } from "@/generated/prisma/client";
 import { raiseAlert } from "./alerts";
 import { db } from "./db";
-import { DAY } from "./dates";
+import { DAY, renewalDateFor } from "./dates";
 import { sendMemberEmail } from "./email/send";
 import {
   addToPrivateSpaces,
@@ -93,15 +93,124 @@ export async function openPayments(limit = 200) {
 
 /* ---------- Stage 3 → 4: after a verified payment ---------- */
 
-/** C04 now, C05 five minutes later; status moves paid → invited. */
-export async function afterPayment(member: Member) {
-  await sendMemberEmail(member, "C04");
+/**
+ * C04 now, C05 five minutes later; status moves paid → invited.
+ * `sendKey` is only set for a payment the team records by hand, so a second recorded payment still gets its emails.
+ */
+export async function afterPayment(member: Member, sendKey = "") {
+  await sendMemberEmail(member, "C04", { sendKey });
   const inviteAt = new Date(Date.now() + 5 * 60 * 1000);
-  await sendMemberEmail(member, "C05", { scheduledAt: inviteAt });
+  await sendMemberEmail(member, "C05", { sendKey, scheduledAt: inviteAt });
   await db().member.updateMany({
     where: { id: member.id, status: "paid" },
     data: { status: "invited", mnInvitedAt: inviteAt },
   });
+}
+
+/* ---------- Payment status changed by the team in /admin ---------- */
+
+export type PaymentChange = "paid" | "unpaid" | "up_to_date" | "failed" | "ended";
+
+const NOT_PAID: MemberStatus[] = ["eoi_registered", "payment_open", "lapsed"];
+/** Paid but not yet in her spaces: can still be set back to not paid without removing access. */
+const PAID_NOT_IN: MemberStatus[] = ["paid", "invited"];
+
+/** Which payment changes make sense for a member at this stage. */
+export function paymentChangesFor(status: MemberStatus): PaymentChange[] {
+  if (NOT_PAID.includes(status)) return status === "payment_open" ? ["paid"] : ["paid", "unpaid"];
+  const options: PaymentChange[] = ["up_to_date", "failed", "ended"];
+  return PAID_NOT_IN.includes(status) ? ["unpaid", ...options] : options;
+}
+
+/**
+ * The team changes a member's payment status by hand (e.g. she paid by bank transfer).
+ * Every change emails her. This updates our records only: it never charges or refunds in Stripe.
+ */
+export async function changePaymentStatus(
+  memberId: string,
+  change: PaymentChange,
+  opts: { amountPence?: number; reference?: string } = {},
+) {
+  const member = await db().member.findUniqueOrThrow({ where: { id: memberId } });
+  if (!paymentChangesFor(member.status).includes(change)) {
+    throw new Error("Please refresh the page: that change does not apply to her any more.");
+  }
+  // A fresh key per change, so the email always goes even if she had it before.
+  const sendKey = `admin-${Date.now()}`;
+  const now = new Date();
+
+  switch (change) {
+    case "paid": {
+      const reference = opts.reference?.trim() || `MANUAL-${now.getTime().toString(36).toUpperCase()}`;
+      let updated: Member;
+      try {
+        updated = await db().member.update({
+          where: { id: member.id },
+          data: {
+            status: "paid",
+            paidAt: now,
+            amount: opts.amountPence ?? 29900,
+            currency: "gbp",
+            priceTier: "manual",
+            paymentReference: reference,
+            renewalDate: renewalDateFor(now),
+            subscriptionStatus: "active",
+            failedPaymentCount: 0,
+            followUpFlag: false,
+            followUpReason: null,
+          },
+        });
+      } catch (e) {
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+          throw new Error("Please use a different payment reference: that one is already recorded for someone else.");
+        }
+        throw e;
+      }
+      await afterPayment(updated, sendKey);
+      return;
+    }
+    case "unpaid": {
+      const updated = await db().member.update({
+        where: { id: member.id },
+        data: {
+          status: "payment_open",
+          paymentOpenedAt: member.paymentOpenedAt ?? now,
+          paidAt: null,
+          amount: null,
+          currency: null,
+          priceTier: null,
+          paymentReference: null,
+          renewalDate: null,
+          subscriptionStatus: null,
+          failedPaymentCount: 0,
+          mnInvitedAt: null,
+        },
+      });
+      await sendMemberEmail(updated, "C19", { sendKey });
+      return;
+    }
+    case "up_to_date": {
+      const updated = await db().member.update({
+        where: { id: member.id },
+        data: { subscriptionStatus: "active", failedPaymentCount: 0 },
+      });
+      await sendMemberEmail(updated, "C20", { sendKey });
+      return;
+    }
+    case "failed": {
+      const updated = await db().member.update({ where: { id: member.id }, data: { subscriptionStatus: "payment_failed" } });
+      await sendMemberEmail(updated, "C16", {
+        sendKey,
+        vars: { retry_line: "Please update your details as soon as you can so your access continues." },
+      });
+      return;
+    }
+    case "ended": {
+      await endMembership(member);
+      await sendMemberEmail({ ...member, status: "lapsed", subscriptionStatus: "cancelled" }, "C21", { sendKey });
+      return;
+    }
+  }
 }
 
 /* ---------- Stage 5 + 6: joined Start Here → spaces ---------- */

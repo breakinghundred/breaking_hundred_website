@@ -25,9 +25,9 @@ export function ActionForm({
       aria-busy={pending}
     >
       {children}
-      {pending && <span className="admin-msg">Working…</span>}
-      {!pending && state.message && <span className="admin-msg ok">{state.message}</span>}
-      {!pending && state.error && <span className="admin-msg err">{state.error}</span>}
+      {pending && <span className="admin-msg">Please wait…</span>}
+      {!pending && state.message && <span className="admin-msg ok" role="status">{state.message}</span>}
+      {!pending && state.error && <span className="admin-msg err" role="alert">{state.error}</span>}
     </form>
   );
 }

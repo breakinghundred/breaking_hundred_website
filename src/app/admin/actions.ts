@@ -4,34 +4,52 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
 import { runDailyJobs } from "@/lib/jobs";
-import { completeSpaces, grantSpaces, importInterest, normaliseEmail, openPayments } from "@/lib/members";
+import { changePaymentStatus, completeSpaces, grantSpaces, importInterest, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
 import { SETTING_FIELDS, saveSettings, type Settings } from "@/lib/settings";
 
 export type AdminState = { message?: string; error?: string };
+
+const SPACES_MESSAGE = {
+  in_circle: "Done. She has been added to her spaces and sent her welcome email.",
+  manual: "We could not add her automatically. Please add her to the five spaces on Mighty Networks, then press Spaces added.",
+  skipped: "Nothing to do: she has already been added.",
+} as const;
 
 async function guarded(fn: () => Promise<string>): Promise<AdminState> {
   await requireAdmin();
   try {
     const message = await fn();
-    revalidatePath("/admin");
+    revalidatePath("/admin", "layout");
     return { message };
   } catch (e) {
-    return { error: e instanceof Error ? e.message : String(e) };
+    console.error("Admin action failed", e);
+    // Our own messages are written for the team; anything else is a system error.
+    const msg = e instanceof Error ? e.message : String(e);
+    return { error: /^(Please|No email|Something)/.test(msg) ? msg : "Sorry, that did not work. Please try again, and tell your developer if it keeps happening." };
   }
 }
 
 export async function openPaymentsAction(): Promise<AdminState> {
   return guarded(async () => {
     const r = await openPayments();
-    return `Opened payments for ${r.processed} members (${r.sent} C02 emails sent). ${r.remaining ? `${r.remaining} still to do: press again.` : "Everyone on the interest list now has their link."}`;
+    const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
+    return r.remaining
+      ? `Payment links sent to ${people(r.sent)}. ${people(r.remaining)} still to go: please press the button again.`
+      : `Done. Payment links sent to ${people(r.sent)}.`;
   });
 }
 
 export async function runJobsAction(): Promise<AdminState> {
   return guarded(async () => {
     const r = await runDailyJobs();
-    const sent = Object.entries(r.counts).map(([k, v]) => `${k}: ${v}`).join(", ") || "nothing due";
-    return `Daily jobs ran. ${sent}.${r.errors.length ? ` Errors: ${r.errors.join("; ")}` : ""}`;
+    const emails = Object.entries(r.counts).filter(([k]) => !k.startsWith("flagged")).reduce((n, [, v]) => n + v, 0);
+    const flagged = Object.entries(r.counts).filter(([k]) => k.startsWith("flagged")).reduce((n, [, v]) => n + v, 0);
+    const parts = [
+      emails ? `${emails} reminder ${emails === 1 ? "email" : "emails"} sent` : "No reminders were due",
+      flagged ? `${flagged} ${flagged === 1 ? "person" : "people"} added to Needs your attention` : "",
+    ].filter(Boolean);
+    if (r.errors.length) console.error("Daily jobs errors", r.errors);
+    return `Check finished. ${parts.join(". ")}.${r.errors.length ? " Some steps had a problem; your developer can see the details in the server logs." : ""}`;
   });
 }
 
@@ -47,7 +65,8 @@ export async function importAction(_prev: AdminState, formData: FormData): Promi
         return { email, firstName: names[0] ?? "", lastName: names[1] ?? "" };
       });
     const r = await importInterest(rows);
-    return `Imported ${rows.length} rows: ${r.created} new, ${r.updated} merged into existing records.`;
+    if (!rows.length) throw new Error("No email addresses found. Put one person per line: first name, last name, email.");
+    return `Added ${r.created} new ${r.created === 1 ? "person" : "people"}${r.updated ? `; ${r.updated} were already on the list` : ""}.`;
   });
 }
 
@@ -67,43 +86,68 @@ export async function memberAction(_prev: AdminState, formData: FormData): Promi
     switch (op) {
       case "retry-spaces": {
         const r = await grantSpaces(id);
-        return `Spaces: ${r.result}.`;
+        return SPACES_MESSAGE[r.result];
       }
       case "spaces-added": {
         const r = await completeSpaces(id);
-        return r.result === "in_circle" ? "Marked in the Circle; C07 sent and C08 scheduled." : "Nothing to do (she is not at joined_network).";
+        return r.result === "in_circle" ? "Thank you. She is now an active member and her welcome email has been sent." : "Nothing to do: she has already been added.";
       }
       case "link-mighty": {
         // A1: she signed up on Mighty Networks with a different email.
         const mnEmail = normaliseEmail(String(formData.get("mnEmail") ?? ""));
-        if (!mnEmail.includes("@")) throw new Error("Enter the email she used on Mighty Networks.");
+        if (!mnEmail.includes("@")) throw new Error("Please enter the email address she used on Mighty Networks.");
         const m = await db().member.update({ where: { id }, data: { mnEmail } });
         if (m.status === "paid" || m.status === "invited") {
           await db().member.update({ where: { id }, data: { status: "joined_network", mnJoinedAt: new Date() } });
           const r = await grantSpaces(id);
-          return `Linked ${mnEmail}. Spaces: ${r.result}.`;
+          return `Linked to ${mnEmail}. ${SPACES_MESSAGE[r.result]}`;
         }
-        return `Linked ${mnEmail}.`;
+        return `Linked to ${mnEmail}.`;
       }
       case "mentor": {
         const m = await db().member.findUniqueOrThrow({ where: { id } });
         await db().member.update({ where: { id }, data: { mentorMatched: !m.mentorMatched } });
-        return `Mentor matched: ${!m.mentorMatched ? "yes" : "no"}.`;
+        return !m.mentorMatched ? "Marked as matched with a mentor." : "Mentor match removed.";
       }
       case "clear-flag":
         await db().member.update({ where: { id }, data: { followUpFlag: false, followUpReason: null } });
-        return "Follow-up flag cleared.";
+        return "Marked as done.";
       case "note":
         await db().member.update({ where: { id }, data: { notes: String(formData.get("notes") ?? "") } });
         return "Note saved.";
     }
-    throw new Error(`Unknown action ${op}`);
+    throw new Error("Something went wrong. Please refresh the page and try again.");
+  });
+}
+
+const PAYMENT_DONE: Record<PaymentChange, string> = {
+  paid: "Saved as paid. She has been emailed her payment confirmation, and her platform invite follows in 5 minutes.",
+  unpaid: "Saved as not paid. She has been emailed her payment link.",
+  up_to_date: "Saved as up to date. She has been emailed to let her know.",
+  failed: "Saved as renewal payment failed. She has been emailed to update her payment details.",
+  ended: "Membership ended. She has been emailed to let her know.",
+};
+
+export async function paymentStatusAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
+  return guarded(async () => {
+    const id = String(formData.get("id"));
+    const change = String(formData.get("change")) as PaymentChange;
+    if (!(change in PAYMENT_DONE)) throw new Error("Please choose the new payment status.");
+    let amountPence: number | undefined;
+    if (change === "paid") {
+      const raw = String(formData.get("amount") ?? "").replace(/[£,\s]/g, "");
+      const pounds = raw ? Number(raw) : 299;
+      if (!Number.isFinite(pounds) || pounds <= 0 || pounds > 10000) throw new Error("Please enter the amount she paid in pounds, for example 299.");
+      amountPence = Math.round(pounds * 100);
+    }
+    await changePaymentStatus(id, change, { amountPence, reference: String(formData.get("reference") ?? "") });
+    return PAYMENT_DONE[change];
   });
 }
 
 export async function resolveAlertAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
   return guarded(async () => {
     await db().alert.update({ where: { id: String(formData.get("id")) }, data: { resolvedAt: new Date() } });
-    return "Alert resolved.";
+    return "Marked as done.";
   });
 }
