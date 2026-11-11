@@ -1,10 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdminAction, requireStaff } from "@/lib/staff";
 import { db } from "@/lib/db";
 import { runDailyJobs } from "@/lib/jobs";
-import { changePaymentStatus, completeSpaces, grantSpaces, importInterest, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
+import { changePaymentStatus, completeSpaces, resendPaymentLink, resendPaymentLinks, grantSpaces, importInterest, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
 import { SETTING_FIELDS, saveSettings, type Settings } from "@/lib/settings";
 
 export type AdminState = { message?: string; error?: string };
@@ -15,9 +15,11 @@ const SPACES_MESSAGE = {
   skipped: "Nothing to do: she has already been added.",
 } as const;
 
-async function guarded(fn: () => Promise<string>): Promise<AdminState> {
-  await requireAdmin();
+/** Runs an admin action. `adminOnly` actions are refused for the team role. */
+async function guarded(fn: () => Promise<string>, adminOnly = false): Promise<AdminState> {
+  await requireStaff();
   try {
+    if (adminOnly) await requireAdminAction();
     const message = await fn();
     revalidatePath("/admin", "layout");
     return { message };
@@ -36,6 +38,17 @@ export async function openPaymentsAction(): Promise<AdminState> {
     return r.remaining
       ? `Payment links sent to ${people(r.sent)}. ${people(r.remaining)} still to go: please press the button again.`
       : `Done. Payment links sent to ${people(r.sent)}.`;
+  }, true);
+}
+
+export async function resendPaymentLinksAction(): Promise<AdminState> {
+  return guarded(async () => {
+    const r = await resendPaymentLinks();
+    const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
+    if (!r.sent && !r.remaining) return "Everyone waiting to pay has already had their link again today.";
+    return r.remaining
+      ? `Payment links resent to ${people(r.sent)}. ${people(r.remaining)} still to go: please press the button again.`
+      : `Done. Payment links resent to ${people(r.sent)}.`;
   });
 }
 
@@ -50,7 +63,7 @@ export async function runJobsAction(): Promise<AdminState> {
     ].filter(Boolean);
     if (r.errors.length) console.error("Daily jobs errors", r.errors);
     return `Check finished. ${parts.join(". ")}.${r.errors.length ? " Some steps had a problem; your developer can see the details in the server logs." : ""}`;
-  });
+  }, true);
 }
 
 export async function importAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
@@ -67,7 +80,7 @@ export async function importAction(_prev: AdminState, formData: FormData): Promi
     const r = await importInterest(rows);
     if (!rows.length) throw new Error("No email addresses found. Put one person per line: first name, last name, email.");
     return `Added ${r.created} new ${r.created === 1 ? "person" : "people"}${r.updated ? `; ${r.updated} were already on the list` : ""}.`;
-  });
+  }, true);
 }
 
 export async function saveSettingsAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
@@ -76,7 +89,7 @@ export async function saveSettingsAction(_prev: AdminState, formData: FormData):
     for (const { key } of SETTING_FIELDS) values[key] = String(formData.get(key) ?? "").trim();
     await saveSettings(values);
     return "Settings saved.";
-  });
+  }, true);
 }
 
 export async function memberAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
@@ -103,6 +116,10 @@ export async function memberAction(_prev: AdminState, formData: FormData): Promi
           return `Linked to ${mnEmail}. ${SPACES_MESSAGE[r.result]}`;
         }
         return `Linked to ${mnEmail}.`;
+      }
+      case "resend-link": {
+        await resendPaymentLink(id);
+        return "Done. Her payment link has been emailed again.";
       }
       case "mentor": {
         const m = await db().member.findUniqueOrThrow({ where: { id } });
@@ -142,7 +159,7 @@ export async function paymentStatusAction(_prev: AdminState, formData: FormData)
     }
     await changePaymentStatus(id, change, { amountPence, reference: String(formData.get("reference") ?? "") });
     return PAYMENT_DONE[change];
-  });
+  }, true);
 }
 
 export async function resolveAlertAction(_prev: AdminState, formData: FormData): Promise<AdminState> {

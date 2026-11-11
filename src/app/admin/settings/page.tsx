@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdminPage } from "@/lib/staff";
 import { db } from "@/lib/db";
 import { mightyConfigured } from "@/lib/mighty";
 import { SETTING_FIELDS, getSettings } from "@/lib/settings";
@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: "Circle settings", robots: { index: f
 const CALL_KEYS = new Set<string>(["onboarding_call_at", "onboarding_call_link", "calendar_link", "recording_link"]);
 
 export default async function SettingsPage() {
-  await requireAdmin();
+  await requireAdminPage();
   const auto = mightyConfigured();
   const [settings, jobs] = await Promise.all([getSettings(), db().jobRun.findMany({ orderBy: { startedAt: "desc" }, take: 1 })]);
   const lastRun = jobs[0];

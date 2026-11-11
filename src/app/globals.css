@@ -1094,6 +1094,16 @@ a.tile:hover { border-color: var(--wine); transform: translateY(-2px); }
 
 details.mini summary { cursor: pointer; color: var(--wine); font-weight: 600; }
 details.mini form { margin-top: 8px; }
+/* Team page */
+.role-key { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 8px; max-width: 760px; }
+.team-add { display: grid; grid-template-columns: 1fr 1fr 160px auto; gap: 12px; align-items: end; max-width: 980px; }
+.team-add label { display: grid; gap: 4px; font-weight: 600; font-size: 0.9rem; }
+.team-add .admin-input { padding: 10px; }
+@media (max-width: 860px) { .team-add { grid-template-columns: 1fr; } }
+.row-muted td { color: #8a7c85; }
+.link-btn.danger { color: #a3262d; }
+.dash-links { align-items: center; }
+
 /* Member details page */
 .member-link { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
 .member-link:hover { color: var(--wine); text-decoration-color: currentColor; }

@@ -91,6 +91,37 @@ export async function openPayments(limit = 200) {
   return { processed: batch.length, sent, remaining };
 }
 
+/** One member: email her payment link again (C02). Always sends. Only for people whose payment is open. */
+export async function resendPaymentLink(memberId: string) {
+  const member = await db().member.findUniqueOrThrow({ where: { id: memberId } });
+  if (member.status !== "payment_open") throw new Error("Please refresh the page: she is not waiting to pay any more.");
+  await sendMemberEmail(member, "C02", { sendKey: `resend-${Date.now()}` });
+}
+
+/**
+ * Everyone with an open, unpaid payment link: email it again (C02).
+ * The send key is today's date, so pressing again the same day only reaches people not yet emailed in this batch.
+ */
+export async function resendPaymentLinks(limit = 200) {
+  const sendKey = `resend-${new Date().toISOString().slice(0, 10)}`;
+  const batch = await db().member.findMany({
+    where: { status: "payment_open", emails: { none: { templateId: "C02", sendKey } } },
+    take: limit,
+    orderBy: { createdAt: "asc" },
+  });
+  let sent = 0;
+  for (const m of batch) {
+    if (await sendMemberEmail(m, "C02", { sendKey })) {
+      sent++;
+      await throttle();
+    }
+  }
+  const remaining = await db().member.count({
+    where: { status: "payment_open", emails: { none: { templateId: "C02", sendKey } } },
+  });
+  return { sent, remaining };
+}
+
 /* ---------- Stage 3 → 4: after a verified payment ---------- */
 
 /**

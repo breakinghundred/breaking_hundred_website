@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/admin-auth";
+import { ADMIN_ONLY, requireStaff } from "@/lib/staff";
 import { SAMPLE_VARS, TEMPLATE_IDS } from "@/lib/email/catalogue";
 import { sendPreview } from "@/lib/email/send";
 import { compile } from "@/lib/email/source";
@@ -18,7 +18,7 @@ function templateId(raw: FormDataEntryValue | null): TemplateId {
 }
 
 export async function editorAction(_prev: EditorState, formData: FormData): Promise<EditorState> {
-  await requireAdmin();
+  if ((await requireStaff()).role !== "admin") return { errors: [ADMIN_ONLY] };
   const id = templateId(formData.get("id"));
   const source = { subject: String(formData.get("subject") ?? ""), body: String(formData.get("body") ?? "") };
   const op = String(formData.get("op"));

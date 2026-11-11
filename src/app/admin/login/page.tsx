@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ADMIN_COOKIE, safeNext, verifySession } from "@/lib/admin-session";
+import { safeNext } from "@/lib/admin-session";
+import { currentStaff } from "@/lib/staff";
 import { LoginForm } from "./LoginForm";
 
 export const metadata: Metadata = { title: "Admin sign in", robots: { index: false, follow: false } };
@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Admin sign in", robots: { index: fal
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const next = safeNext((await searchParams).next);
   // Already signed in: go straight through.
-  if (verifySession((await cookies()).get(ADMIN_COOKIE)?.value)) redirect(next);
+  if (await currentStaff().catch(() => null)) redirect(next);
 
   return (
     <section className="section flow-page">

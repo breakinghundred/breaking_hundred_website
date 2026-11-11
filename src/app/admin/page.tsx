@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { MemberStatus } from "@/generated/prisma/client";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireStaff } from "@/lib/staff";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/dates";
 import { countryName } from "@/lib/countries";
@@ -14,6 +14,7 @@ import { ALERT_TITLES, STAGES, STAGE_ORDER, billingLabel, plain } from "./labels
 import {
   memberAction,
   openPaymentsAction,
+  resendPaymentLinksAction,
   resolveAlertAction,
 } from "./actions";
 
@@ -22,7 +23,8 @@ export const metadata: Metadata = { title: "Circle dashboard", robots: { index: 
 const PAYING = new Set<MemberStatus>(["paid", "invited", "joined_network", "in_circle", "academy_complete"]);
 
 export default async function AdminPage({ searchParams }: { searchParams: Promise<{ status?: string; flag?: string; q?: string }> }) {
-  await requireAdmin();
+  const staff = await requireStaff();
+  const isAdmin = staff.role === "admin";
   const { status, flag, q } = await searchParams;
   const filterStatus = STAGE_ORDER.includes(status as MemberStatus) ? (status as MemberStatus) : undefined;
   const auto = mightyConfigured();
@@ -69,8 +71,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             <p className="muted">Everyone who has signed up, where they are, and anything that needs you.</p>
           </div>
           <nav className="dash-links" aria-label="Admin">
-            <Link href="/admin/emails" className="button outline small"><span>Edit email wording</span></Link>
-            <Link href="/admin/settings" className="button outline small"><span>Settings</span></Link>
+            {isAdmin && (
+              <>
+                <Link href="/admin/emails" className="button outline small"><span>Edit email wording</span></Link>
+                <Link href="/admin/settings" className="button outline small"><span>Settings</span></Link>
+                <Link href="/admin/team" className="button outline small"><span>Team</span></Link>
+              </>
+            )}
+            <span className="muted small">Signed in as {staff.name}</span>
             <form action={signOut}>
               <button type="submit" className="link-btn">Sign out</button>
             </form>
@@ -79,7 +87,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 
         {lastRun && !lastRun.ok && (
           <p className="warn small">
-            The last automatic email check had a problem. <Link href="/admin/settings#automatic">Open Settings</Link> to run it again.
+            The last automatic email check had a problem. {isAdmin ? <><Link href="/admin/settings#automatic">Open Settings</Link> to run it again.</> : "Please let an admin know."}
           </p>
         )}
 
@@ -104,7 +112,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         </div>
 
         {/* Send payment links: only shown while people are waiting */}
-        {waiting > 0 && (
+        {isAdmin && waiting > 0 && (
           <div className="flow-card dash-callout">
             <div>
               <h3>
@@ -117,6 +125,28 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </div>
             <ActionForm action={openPaymentsAction} confirm={`Email a payment link to ${waiting} ${waiting === 1 ? "person" : "people"} now?`}>
               <button className="button" type="submit"><span>Send payment links</span></button>
+            </ActionForm>
+          </div>
+        )}
+
+        {/* Resend payment links to everyone who has one but has not paid */}
+        {count("payment_open") > 0 && (
+          <div className="flow-card dash-callout">
+            <div>
+              <h3>
+                {count("payment_open")} {count("payment_open") === 1 ? "person has" : "people have"} a payment link but
+                {count("payment_open") === 1 ? " has" : " have"} not paid yet
+              </h3>
+              <p className="muted small">
+                Email each of them their payment link again. Reminders also go automatically 3 and 7 days after the
+                first link. To resend to one person only, use the button on her row below.
+              </p>
+            </div>
+            <ActionForm
+              action={resendPaymentLinksAction}
+              confirm={`Email the payment link again to ${count("payment_open")} ${count("payment_open") === 1 ? "person" : "people"}?`}
+            >
+              <button className="button outline" type="submit"><span>Resend payment links</span></button>
             </ActionForm>
           </div>
         )}
@@ -259,10 +289,18 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                       <td data-label="Paid">
                         <Link href={`/admin/members/${m.id}`} className="nowrap">{m.paidAt ? formatDate(m.paidAt) : "Not paid"}</Link>
                         {m.priceTier === "manual" && <div className="muted small">Recorded by the team</div>}
-                        <details className="mini">
-                          <summary>Change payment status</summary>
-                          <PaymentStatusForm id={m.id} name={`${m.firstName} ${m.lastName}`.trim()} options={paymentChangesFor(m.status)} />
-                        </details>
+                        {m.status === "payment_open" && (
+                          <ActionForm action={memberAction} confirm={`Email ${m.firstName} her payment link again?`}>
+                            <input type="hidden" name="id" value={m.id} />
+                            <button name="op" value="resend-link" className="link-btn">Resend payment link</button>
+                          </ActionForm>
+                        )}
+                        {isAdmin && (
+                          <details className="mini">
+                            <summary>Change payment status</summary>
+                            <PaymentStatusForm id={m.id} name={`${m.firstName} ${m.lastName}`.trim()} options={paymentChangesFor(m.status)} />
+                          </details>
+                        )}
                       </td>
                       <td className="nowrap" data-label="Renews">
                         {m.renewalDate ? formatDate(m.renewalDate) : "—"}

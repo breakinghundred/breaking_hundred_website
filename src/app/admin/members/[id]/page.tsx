@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireStaff } from "@/lib/staff";
 import { countryName } from "@/lib/countries";
 import { db } from "@/lib/db";
 import { formatDate, formatMoney } from "@/lib/dates";
 import { TEMPLATE_INFO } from "@/lib/email/catalogue";
 import type { TemplateId } from "@/lib/email/templates";
 import { paymentChangesFor } from "@/lib/members";
+import { ActionForm } from "../../ActionForm";
 import { PaymentStatusForm } from "../../PaymentStatusForm";
+import { memberAction } from "../../actions";
 import { STAGES, billingLabel } from "../../labels";
 
 export const metadata: Metadata = { title: "Member details", robots: { index: false, follow: false } };
@@ -37,7 +39,8 @@ function Rows({ rows }: { rows: [string, ReactNode][] }) {
 }
 
 export default async function MemberPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  const staff = await requireStaff();
+  const isAdmin = staff.role === "admin";
   const { id } = await params;
   const m = await db().member.findUnique({ where: { id }, include: { emails: { orderBy: { sentAt: "desc" } } } });
   if (!m) notFound();
@@ -105,10 +108,18 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
                 {m.stripeSubscriptionId && <a href={stripeUrl("subscriptions", m.stripeSubscriptionId)} target="_blank" rel="noopener noreferrer">View her membership in Stripe ↗</a>}
               </p>
             )}
-            <details className="mini">
-              <summary>Change payment status</summary>
-              <PaymentStatusForm id={m.id} name={name || m.email} options={paymentChangesFor(m.status)} />
-            </details>
+            {m.status === "payment_open" && (
+              <ActionForm action={memberAction} confirm={`Email ${m.firstName} her payment link again?`}>
+                <input type="hidden" name="id" value={m.id} />
+                <button name="op" value="resend-link" className="button outline small"><span>Resend payment link</span></button>
+              </ActionForm>
+            )}
+            {isAdmin && (
+              <details className="mini">
+                <summary>Change payment status</summary>
+                <PaymentStatusForm id={m.id} name={name || m.email} options={paymentChangesFor(m.status)} />
+              </details>
+            )}
           </div>
 
           <div className="detail-card">

@@ -171,3 +171,27 @@ model EmailTemplate {
   body      String
   updatedAt DateTime @updatedAt
 }
+
+enum StaffRole {
+  admin
+  team
+}
+
+/// People who can sign in to /admin. The ADMIN_PASSWORD account (the main admin) is not stored here.
+model StaffUser {
+  id             String    @id @default(cuid())
+  /// Lower case and trimmed.
+  email          String    @unique
+  name           String
+  role           StaffRole @default(team)
+  /// scrypt hash; null until she sets a password from her invite link.
+  passwordHash   String?
+  /// false = access removed. Kept so it can be restored.
+  active         Boolean   @default(true)
+  /// Bumped when access is removed or the password changes: ends her sessions and old invite links.
+  sessionVersion Int       @default(0)
+  invitedBy      String?
+  lastSignInAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}

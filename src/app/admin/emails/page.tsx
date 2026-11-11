@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdminPage } from "@/lib/staff";
 import { TEMPLATE_IDS, TEMPLATE_INFO } from "@/lib/email/catalogue";
 import { editedIds, getSource } from "@/lib/email/store";
 
 export const metadata: Metadata = { title: "Email templates", robots: { index: false, follow: false } };
 
 export default async function EmailsPage() {
-  await requireAdmin();
+  await requireAdminPage();
   const edited = await editedIds();
   const subjects = await Promise.all(TEMPLATE_IDS.map(async (id) => (await getSource(id)).subject));
 

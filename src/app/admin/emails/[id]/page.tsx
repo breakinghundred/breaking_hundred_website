@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdminPage } from "@/lib/staff";
 import { TEMPLATE_IDS, TEMPLATE_INFO } from "@/lib/email/catalogue";
 import { getSource } from "@/lib/email/store";
 import type { TemplateId } from "@/lib/email/templates";
@@ -10,7 +10,7 @@ import { Editor } from "./Editor";
 export const metadata: Metadata = { title: "Edit email", robots: { index: false, follow: false } };
 
 export default async function EditEmailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  await requireAdminPage();
   const { id: raw } = await params;
   const id = raw.toUpperCase() as TemplateId;
   if (!TEMPLATE_IDS.includes(id)) notFound();
