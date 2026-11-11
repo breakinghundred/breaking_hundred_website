@@ -96,10 +96,21 @@ export async function importAction(_prev: AdminState, formData: FormData): Promi
 
 export async function saveSettingsAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
   return guarded(async () => {
+    // Each section saves only its own fields, so the others are left as they are.
     const values: Partial<Settings> = {};
-    for (const { key } of SETTING_FIELDS) values[key] = String(formData.get(key) ?? "").trim();
+    for (const f of SETTING_FIELDS) {
+      if (!formData.has(f.key)) continue;
+      const value = String(formData.get(f.key) ?? "").trim();
+      if ("type" in f) {
+        if (value && Number.isNaN(new Date(`${value}Z`).getTime())) throw new Error("Please choose the date and time of the call again.");
+      } else if (value && !/^https?:\/\/[^\s]+\.[^\s]+$/i.test(value)) {
+        throw new Error(`Please check “${f.label}”: it should be a full web address starting with https://`);
+      }
+      values[f.key] = value;
+    }
+    if (!Object.keys(values).length) throw new Error("Something went wrong. Please refresh the page and try again.");
     await saveSettings(values);
-    return "Settings saved.";
+    return "Saved. New emails will use these details.";
   }, true);
 }
 

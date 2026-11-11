@@ -6,17 +6,17 @@ import { db } from "./db";
  * Each one falls back to an environment variable of the same name in upper case.
  */
 export const SETTING_FIELDS = [
-  { key: "network_url", label: "Network URL (browser)" },
-  { key: "network_invite_link", label: "Network invite link" },
-  { key: "start_here_space_url", label: "Start Here space URL" },
-  { key: "academy_space_url", label: "Academy space URL" },
-  { key: "monthly_live_url", label: "Monthly Live space URL" },
-  { key: "ios_app_link", label: "App Store link" },
-  { key: "android_app_link", label: "Google Play link" },
-  { key: "onboarding_call_at", label: "Onboarding call (date and time, UK)", type: "datetime-local" },
-  { key: "onboarding_call_link", label: "Onboarding call joining link" },
-  { key: "calendar_link", label: "Onboarding call calendar link" },
-  { key: "recording_link", label: "Onboarding call recording link" },
+  { key: "network_url", label: "Your network's web address" },
+  { key: "network_invite_link", label: "Invite link to join the network" },
+  { key: "start_here_space_url", label: "Start Here space" },
+  { key: "academy_space_url", label: "Academy space" },
+  { key: "monthly_live_url", label: "Monthly Live space" },
+  { key: "ios_app_link", label: "iPhone app (App Store)" },
+  { key: "android_app_link", label: "Android app (Google Play)" },
+  { key: "onboarding_call_at", label: "Date and time (UK time)", type: "datetime-local" },
+  { key: "onboarding_call_link", label: "Joining link" },
+  { key: "calendar_link", label: "Add-to-calendar link" },
+  { key: "recording_link", label: "Recording link" },
 ] as const;
 
 export type SettingKey = (typeof SETTING_FIELDS)[number]["key"];
