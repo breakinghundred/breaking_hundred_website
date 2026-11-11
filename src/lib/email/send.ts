@@ -5,8 +5,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { db } from "../db";
 import { optionalEnv } from "../env";
 import { getSettings } from "../settings";
-import { automatedLogos, logosById } from "./logos";
-import { renderHtml, renderText, type LogoRef } from "./render";
+import { NO_LOGOS, automatedLogos, logosById, type EmailLogos } from "./logos";
+import { renderHtml, renderText } from "./render";
 import { compile, type Source } from "./source";
 import { getSource } from "./store";
 import type { TemplateId, Vars, Block } from "./templates";
@@ -22,11 +22,16 @@ function resend() {
 const FROM = () => optionalEnv("EMAIL_FROM") ?? "Breaking Hundred <circle@breakinghundred.org>";
 const REPLY_TO = () => optionalEnv("EMAIL_REPLY_TO") ?? "admin@breakinghundred.org";
 
-type Raw = { to: string; subject: string; blocks: Block[]; logos?: LogoRef[]; scheduledAt?: Date; idempotencyKey?: string };
+type Raw = { to: string; subject: string; blocks: Block[]; logos?: EmailLogos; scheduledAt?: Date; idempotencyKey?: string };
+
+/** Resend won't schedule an email with attachments, so a scheduled email drops inline (cid:) logos. */
+const forSend = (logos: EmailLogos, scheduled: boolean) => (scheduled && logos.attachments.length ? NO_LOGOS : logos);
 
 /** Low-level send. Without RESEND_API_KEY in development, prints the email instead. */
-async function deliver({ to, subject, blocks, logos = [], scheduledAt, idempotencyKey }: Raw): Promise<string | null> {
+async function deliver({ to, subject, blocks, logos: chosen = NO_LOGOS, scheduledAt, idempotencyKey }: Raw): Promise<string | null> {
   const r = resend();
+  const scheduled = !!scheduledAt && scheduledAt.getTime() > Date.now() + 30_000;
+  const logos = forSend(chosen, scheduled);
   if (!r) {
     if (process.env.NODE_ENV === "production") throw new Error("RESEND_API_KEY is not set");
     console.info(`\n[email:dev] to=${to}${scheduledAt ? ` at=${scheduledAt.toISOString()}` : ""}\nSubject: ${subject}\n\n${renderText(blocks)}\n`);
@@ -38,9 +43,10 @@ async function deliver({ to, subject, blocks, logos = [], scheduledAt, idempoten
       to,
       replyTo: REPLY_TO(),
       subject,
-      html: renderHtml(blocks, logos),
+      html: renderHtml(blocks, logos.refs),
       text: renderText(blocks),
-      ...(scheduledAt && scheduledAt.getTime() > Date.now() + 30_000 ? { scheduledAt: scheduledAt.toISOString() } : {}),
+      ...(logos.attachments.length ? { attachments: logos.attachments } : {}),
+      ...(scheduled ? { scheduledAt: scheduledAt!.toISOString() } : {}),
     },
     idempotencyKey ? { idempotencyKey } : undefined,
   );
@@ -92,7 +98,7 @@ export async function sendMemberEmail(
 }
 
 /** Test send of a template from /admin, with sample values. Not logged. */
-export async function sendPreview(to: string, subject: string, blocks: Block[], logos?: LogoRef[]) {
+export async function sendPreview(to: string, subject: string, blocks: Block[], logos?: EmailLogos) {
   await deliver({ to, subject: `[Test] ${subject}`, blocks, logos: logos ?? (await automatedLogos()) });
 }
 
@@ -104,9 +110,13 @@ export async function sendPreview(to: string, subject: string, blocks: Block[], 
 export async function sendPreviews(to: string, emails: { subject: string; blocks: Block[] }[]): Promise<boolean> {
   const r = resend();
   const logos = await automatedLogos();
-  if (!r) {
-    for (const e of emails) await deliver({ to, subject: `[Test] ${e.subject}`, blocks: e.blocks, logos });
-    return false;
+  if (!r || logos.attachments.length) {
+    // The batch API can't carry attachments, so inline logos go one at a time.
+    for (const [n, e] of emails.entries()) {
+      if (r && n) await pause();
+      await deliver({ to, subject: `[Test] ${e.subject}`, blocks: e.blocks, logos });
+    }
+    return !!r;
   }
   for (let i = 0; i < emails.length; i += 100) {
     const { error } = await r.batch.send(
@@ -115,7 +125,7 @@ export async function sendPreviews(to: string, emails: { subject: string; blocks
         to,
         replyTo: REPLY_TO(),
         subject: `[Test] ${e.subject}`,
-        html: renderHtml(e.blocks, logos),
+        html: renderHtml(e.blocks, logos.refs),
         text: renderText(e.blocks),
       })),
     );
@@ -123,6 +133,9 @@ export async function sendPreviews(to: string, emails: { subject: string; blocks
   }
   return true;
 }
+
+/** Stay under Resend's default rate limit (2 requests a second) when sending one by one. */
+const pause = () => new Promise((r) => setTimeout(r, 550));
 
 /** EmailLog.templateId for emails written by the team. */
 export const CUSTOM_EMAIL = "custom";
@@ -165,9 +178,17 @@ export async function sendCustomEmail(
     }
     if (!claimed.length) continue;
 
+    const done = new Set<string>();
     try {
-      if (!r) {
-        for (const c of claimed) await deliver({ to: c.member.email, subject: c.subject, blocks: c.blocks, logos });
+      if (!r || logos.attachments.length) {
+        // One at a time: without Resend (development), or with inline logos, which the batch API can't carry.
+        for (const [n, c] of claimed.entries()) {
+          if (r && n) await pause();
+          const id = await deliver({ to: c.member.email, subject: c.subject, blocks: c.blocks, logos, idempotencyKey: `${opts.sendKey}:${c.member.id}`.slice(0, 256) });
+          done.add(c.logId);
+          sent++;
+          if (id) await db().emailLog.update({ where: { id: c.logId }, data: { resendId: id } });
+        }
       } else {
         const { data, error } = await r.batch.send(
           claimed.map((c) => ({
@@ -175,20 +196,22 @@ export async function sendCustomEmail(
             to: c.member.email,
             replyTo: REPLY_TO(),
             subject: c.subject,
-            html: renderHtml(c.blocks, logos),
+            html: renderHtml(c.blocks, logos.refs),
             text: renderText(c.blocks),
           })),
           { idempotencyKey: `${opts.sendKey}:${i}`.slice(0, 256) },
         );
         if (error) throw new Error(`Resend: ${error.message}`);
+        claimed.forEach((c) => done.add(c.logId));
+        sent += claimed.length;
         await Promise.all(
           claimed.map((c, n) => (data?.data[n]?.id ? db().emailLog.update({ where: { id: c.logId }, data: { resendId: data.data[n].id } }) : null)),
         );
       }
-      sent += claimed.length;
     } catch (e) {
-      // Release the claims so the send can be tried again.
-      await db().emailLog.deleteMany({ where: { id: { in: claimed.map((c) => c.logId) } } }).catch(() => {});
+      // Release the claims of anyone not yet emailed, so the send can be tried again without doubling up.
+      const unsent = claimed.filter((c) => !done.has(c.logId)).map((c) => c.logId);
+      await db().emailLog.deleteMany({ where: { id: { in: unsent } } }).catch(() => {});
       if (sent) throw new Error(`${sent} sent, then it stopped: ${e instanceof Error ? e.message : String(e)}`);
       throw e;
     }
