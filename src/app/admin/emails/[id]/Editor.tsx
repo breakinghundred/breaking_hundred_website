@@ -12,6 +12,7 @@ import {
 import { renderHtml } from "@/lib/email/render";
 import { compile } from "@/lib/email/source";
 import type { TemplateId } from "@/lib/email/templates";
+import { useConfirmSubmit } from "../../ConfirmDialog";
 import { editorAction, type EditorState } from "./actions";
 
 export function Editor({ id, subject: savedSubject, body: savedBody, edited }: { id: TemplateId; subject: string; body: string; edited: boolean }) {
@@ -19,6 +20,7 @@ export function Editor({ id, subject: savedSubject, body: savedBody, edited }: {
   const [subject, setSubject] = useState(savedSubject);
   const [body, setBody] = useState(savedBody);
   const [saved, setSaved] = useState({ subject: savedSubject, body: savedBody });
+  const [guard, dialog] = useConfirmSubmit();
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
   const lastFocus = useRef<"subject" | "body">("body");
@@ -52,7 +54,6 @@ export function Editor({ id, subject: savedSubject, body: savedBody, edited }: {
       action={(fd) => {
         const op = fd.get("op");
         if (op === "reset") {
-          if (!window.confirm("Replace this email with its original wording? Your edits will be lost.")) return;
           const original = defaultSource(id);
           setSubject(original.subject);
           setBody(original.body);
@@ -62,8 +63,18 @@ export function Editor({ id, subject: savedSubject, body: savedBody, edited }: {
         }
         return action(fd);
       }}
+      onSubmit={(e) => {
+        const op = ((e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)?.value;
+        guard(
+          e,
+          op === "reset"
+            ? { title: "Reset to the original wording?", message: "Your changes to this email will be lost.", confirmLabel: "Reset", danger: true }
+            : null,
+        );
+      }}
       className="email-editor"
     >
+      {dialog}
       <input type="hidden" name="id" value={id} />
 
       <div className="email-editor-main">

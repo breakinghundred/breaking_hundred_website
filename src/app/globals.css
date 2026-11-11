@@ -1165,3 +1165,33 @@ details.mini form { margin-top: 8px; }
   .admin-table td { border: 0; padding: 6px 0; }
   .admin-table td[data-label]::before { content: attr(data-label); display: block; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
 }
+
+/* ---------- confirm dialog (replaces window.confirm in /admin) ---------- */
+.confirm-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  height: fit-content;
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  border: 0;
+  padding: 0;
+  border-radius: 12px;
+  width: min(460px, calc(100vw - 32px));
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 24px 70px rgba(33, 14, 32, 0.28);
+}
+.confirm-dialog::backdrop { background: rgba(33, 14, 32, 0.5); backdrop-filter: blur(2px); }
+.confirm-dialog[open] { animation: confirm-in 0.3s var(--ease-out-expo); }
+@keyframes confirm-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
+.confirm-body { padding: 26px 26px 22px; }
+.confirm-body h2 { font-size: 1.25rem; line-height: 1.35; font-weight: 700; margin: 0 0 12px; letter-spacing: 0; }
+.confirm-body p { margin: 0 0 8px; font-size: 0.95rem; line-height: 1.55; color: var(--muted); }
+.confirm-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.confirm-dialog .button { min-height: 44px; padding: 10px 20px; }
+.confirm-dialog .button.outline { background: #fff; color: var(--wine); border: 1.5px solid var(--wine); }
+.confirm-dialog .button.outline:hover { color: #fff; border-color: var(--plum); }
+.confirm-dialog .button.danger { background: #a3243b; }
+@media (max-width: 480px) { .confirm-actions .button { flex: 1 1 100%; } .confirm-actions { flex-direction: column-reverse; } }
+@media (prefers-reduced-motion: reduce) { .confirm-dialog[open] { animation: none; } }

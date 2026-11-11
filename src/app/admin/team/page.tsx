@@ -105,13 +105,13 @@ export default async function TeamPage() {
                               {p.passwordHash ? "Send a new password link" : "Resend invite"}
                             </button>
                           </ActionForm>
-                          <ActionForm action={staffAction} className="inline" confirm={`Remove ${p.name}'s access? They will be signed out straight away. You can restore it later.`}>
+                          <ActionForm action={staffAction} className="inline" confirm={{ title: `Remove ${p.name}'s access?`, message: "They will be signed out straight away. You can restore it later.", confirmLabel: "Remove access", danger: true }}>
                             <input type="hidden" name="id" value={p.id} />
                             <button name="op" value="remove" className="link-btn danger">Remove access</button>
                           </ActionForm>
                         </>
                       ) : (
-                        <ActionForm action={staffAction} className="inline" confirm={`Restore ${p.name}'s access as ${ROLE_LABELS[p.role].label}?`}>
+                        <ActionForm action={staffAction} className="inline" confirm={{ title: `Restore ${p.name}'s access?`, message: `They will be able to sign in again as ${ROLE_LABELS[p.role].label}, with their existing password.`, confirmLabel: "Restore access" }}>
                           <input type="hidden" name="id" value={p.id} />
                           <button name="op" value="restore" className="link-btn">Restore access</button>
                         </ActionForm>

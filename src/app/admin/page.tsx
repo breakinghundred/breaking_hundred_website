@@ -123,7 +123,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                 open (21 November). Anyone who registers later is included the next time you press it.
               </p>
             </div>
-            <ActionForm action={openPaymentsAction} confirm={`Email a payment link to ${waiting} ${waiting === 1 ? "person" : "people"} now?`}>
+            <ActionForm action={openPaymentsAction} confirm={{ title: "Send payment links now?", message: `${waiting} ${waiting === 1 ? "person" : "people"} will be emailed a personal payment link.`, confirmLabel: `Send ${waiting === 1 ? "1 email" : `${waiting} emails`}` }}>
               <button className="button" type="submit"><span>Send payment links</span></button>
             </ActionForm>
           </div>
@@ -144,7 +144,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </div>
             <ActionForm
               action={resendPaymentLinksAction}
-              confirm={`Email the payment link again to ${count("payment_open")} ${count("payment_open") === 1 ? "person" : "people"}?`}
+              confirm={{ title: "Resend payment links?", message: [`${count("payment_open")} ${count("payment_open") === 1 ? "person who hasn't" : "people who haven't"} paid yet will get their payment link again.`, "Anyone already sent a reminder today is skipped."], confirmLabel: "Resend links" }}
             >
               <button className="button outline" type="submit"><span>Resend payment links</span></button>
             </ActionForm>
@@ -168,7 +168,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   </p>
                 </div>
                 <div className="todo-actions">
-                  <ActionForm action={memberAction} confirm={`Have you added ${m.firstName} to all five private spaces?`}>
+                  <ActionForm action={memberAction} confirm={{ title: `Have you added ${m.firstName} to all five private spaces?`, confirmLabel: "Yes, all five" }}>
                     <input type="hidden" name="id" value={m.id} />
                     <button name="op" value="spaces-added" className="button small"><span>Spaces added</span></button>
                   </ActionForm>
@@ -290,7 +290,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                         <Link href={`/admin/members/${m.id}`} className="nowrap">{m.paidAt ? formatDate(m.paidAt) : "Not paid"}</Link>
                         {m.priceTier === "manual" && <div className="muted small">Recorded by the team</div>}
                         {m.status === "payment_open" && (
-                          <ActionForm action={memberAction} confirm={`Email ${m.firstName} her payment link again?`}>
+                          <ActionForm action={memberAction} confirm={{ title: `Email ${m.firstName} her payment link again?`, message: `It will go to ${m.email}.`, confirmLabel: "Send link" }}>
                             <input type="hidden" name="id" value={m.id} />
                             <button name="op" value="resend-link" className="link-btn">Resend payment link</button>
                           </ActionForm>

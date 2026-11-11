@@ -3,12 +3,14 @@
 import { useActionState, useState } from "react";
 import type { PaymentChange } from "@/lib/members";
 import { paymentStatusAction } from "./actions";
+import { useConfirmSubmit } from "./ConfirmDialog";
 import { PAYMENT_CHANGES } from "./labels";
 
 /** "Change payment status": every change emails the member, so the confirm says which email goes. */
 export function PaymentStatusForm({ id, name, options }: { id: string; name: string; options: PaymentChange[] }) {
   const [state, formAction, pending] = useActionState(paymentStatusAction, {});
   const [change, setChange] = useState<PaymentChange | "">("");
+  const [guard, dialog] = useConfirmSubmit();
 
   return (
     <form
@@ -17,15 +19,18 @@ export function PaymentStatusForm({ id, name, options }: { id: string; name: str
       aria-busy={pending}
       onSubmit={(e) => {
         if (!change) return e.preventDefault();
-        const ok = window.confirm(
-          `Change ${name}'s payment status to "${PAYMENT_CHANGES[change].label}"?\n\n` +
-            `She will be sent ${PAYMENT_CHANGES[change].email}.\n\n` +
+        guard(e, {
+          title: `Change ${name}'s payment status to "${PAYMENT_CHANGES[change].label}"?`,
+          message: [
+            `She will be sent ${PAYMENT_CHANGES[change].email}.`,
             "This updates our records only. It does not charge or refund anything in Stripe.",
-        );
-        if (!ok) e.preventDefault();
+          ],
+          confirmLabel: "Save and email her",
+        });
       }}
     >
       <input type="hidden" name="id" value={id} />
+      {dialog}
       <select
         name="change"
         className="admin-input"

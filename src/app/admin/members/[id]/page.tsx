@@ -109,7 +109,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
               </p>
             )}
             {m.status === "payment_open" && (
-              <ActionForm action={memberAction} confirm={`Email ${m.firstName} her payment link again?`}>
+              <ActionForm action={memberAction} confirm={{ title: `Email ${m.firstName} her payment link again?`, message: `It will go to ${m.email}.`, confirmLabel: "Send link" }}>
                 <input type="hidden" name="id" value={m.id} />
                 <button name="op" value="resend-link" className="button outline small"><span>Resend payment link</span></button>
               </ActionForm>
