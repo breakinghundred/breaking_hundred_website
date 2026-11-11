@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { formatDate } from "@/lib/dates";
 import { countryName } from "@/lib/countries";
 import { mightyConfigured } from "@/lib/mighty";
+import { checkPayments } from "@/lib/stripe";
 import { ActionForm } from "./ActionForm";
 import { signOut } from "./login/actions";
 import { ALERT_TITLES, STAGES, STAGE_ORDER, billingLabel, plain } from "./labels";
@@ -27,7 +28,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
   const filterStatus = STAGE_ORDER.includes(status as MemberStatus) ? (status as MemberStatus) : undefined;
   const auto = mightyConfigured();
 
-  const [counts, alerts, needSpaces, flagged, members, jobs] = await Promise.all([
+  const [counts, alerts, needSpaces, flagged, members, jobs, payments] = await Promise.all([
     db().member.groupBy({ by: ["status"], _count: true }),
     db().alert.findMany({ where: { resolvedAt: null }, orderBy: { createdAt: "desc" }, take: 50 }),
     db().member.findMany({ where: { status: "joined_network" }, orderBy: { mnJoinedAt: "asc" }, take: 50 }),
@@ -51,6 +52,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       take: 300,
     }),
     db().jobRun.findMany({ orderBy: { startedAt: "desc" }, take: 1 }),
+    checkPayments(),
   ]);
   const count = (s: MemberStatus) => counts.find((c) => c.status === s)?._count ?? 0;
   const total = counts.reduce((n, c) => n + c._count, 0);
@@ -82,6 +84,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </form>
           </nav>
         </header>
+
+        {!payments.ok && (
+          <p className="warn small">
+            Payments aren&apos;t set up correctly, so members can&apos;t pay and payment links are on hold.{" "}
+            {isAdmin ? <><Link href="/admin/settings#payments">Open Settings</Link> to see what&apos;s wrong.</> : "Please let an admin know."}
+          </p>
+        )}
 
         {lastRun && !lastRun.ok && (
           <p className="warn small">

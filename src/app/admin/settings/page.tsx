@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireAdminPage } from "@/lib/staff";
 import { db } from "@/lib/db";
 import { mightyConfigured } from "@/lib/mighty";
+import { checkPayments } from "@/lib/stripe";
 import { SETTING_FIELDS, getSettings } from "@/lib/settings";
 import { ActionForm } from "../ActionForm";
 import { importAction, runJobsAction, saveSettingsAction } from "../actions";
@@ -14,7 +15,11 @@ const CALL_KEYS = new Set<string>(["onboarding_call_at", "onboarding_call_link",
 export default async function SettingsPage() {
   await requireAdminPage();
   const auto = mightyConfigured();
-  const [settings, jobs] = await Promise.all([getSettings(), db().jobRun.findMany({ orderBy: { startedAt: "desc" }, take: 1 })]);
+  const [settings, jobs, payments] = await Promise.all([
+    getSettings(),
+    db().jobRun.findMany({ orderBy: { startedAt: "desc" }, take: 1 }),
+    checkPayments(),
+  ]);
   const lastRun = jobs[0];
   const callFields = SETTING_FIELDS.filter((f) => CALL_KEYS.has(f.key));
   const linkFields = SETTING_FIELDS.filter((f) => !CALL_KEYS.has(f.key));
@@ -30,6 +35,40 @@ export default async function SettingsPage() {
           change it.
         </p>
         <div className="dash-drawers">
+          <details className="drawer" id="payments" open={!payments.ok}>
+            <summary>
+              <strong>Payments (Stripe)</strong>
+              <span className={`small ${payments.ok ? "muted" : "warn"}`}>
+                {payments.ok
+                  ? payments.testMode
+                    ? "Working, in test mode: no real money is taken"
+                    : "Working: members can pay"
+                  : "Not set up correctly: members can't pay yet"}
+              </span>
+            </summary>
+            <ul className="status-list small">
+              {payments.ok ? (
+                <li>
+                  <span className="dot ok" aria-hidden />
+                  Stripe is connected and the £299 yearly price is set up.
+                  {payments.testMode && " These are test keys: switch to the live keys before payment links go out."}
+                </li>
+              ) : (
+                payments.problems.map((p) => (
+                  <li key={p}>
+                    <span className="dot bad" aria-hidden />
+                    {p}
+                  </li>
+                ))
+              )}
+            </ul>
+            {!payments.ok && (
+              <p className="small muted">
+                These settings live with the website&apos;s hosting (its environment variables), not on this page. After
+                fixing them, redeploy the site and reload this page to check again.
+              </p>
+            )}
+          </details>
           <details className="drawer">
             <summary>
               <strong>Onboarding call</strong>

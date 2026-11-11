@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { checkPayments } from "@/lib/stripe";
 import { requireAdminAction, requireStaff } from "@/lib/staff";
 import { db } from "@/lib/db";
 import { runDailyJobs } from "@/lib/jobs";
@@ -31,8 +32,17 @@ async function guarded(fn: () => Promise<string>, adminOnly = false): Promise<Ad
   }
 }
 
+/** Payment links are useless while Stripe can't open a checkout, so don't send them. */
+async function paymentsReady() {
+  const check = await checkPayments();
+  if (!check.ok) {
+    throw new Error("Please fix the payment set-up first: Stripe can't take payments yet, so the links wouldn't work. Open Settings, then Payments, to see what's wrong.");
+  }
+}
+
 export async function openPaymentsAction(): Promise<AdminState> {
   return guarded(async () => {
+    await paymentsReady();
     const r = await openPayments();
     const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
     return r.remaining
@@ -43,6 +53,7 @@ export async function openPaymentsAction(): Promise<AdminState> {
 
 export async function resendPaymentLinksAction(): Promise<AdminState> {
   return guarded(async () => {
+    await paymentsReady();
     const r = await resendPaymentLinks();
     const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
     if (!r.sent && !r.remaining) return "Everyone waiting to pay has already had their link again today.";
@@ -118,6 +129,7 @@ export async function memberAction(_prev: AdminState, formData: FormData): Promi
         return `Linked to ${mnEmail}.`;
       }
       case "resend-link": {
+        await paymentsReady();
         await resendPaymentLink(id);
         return "Done. Her payment link has been emailed again.";
       }
