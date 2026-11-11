@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { useActionState, useMemo, useRef, useState } from "react";
 import { MERGE_FIELDS, SAMPLE_VARS, validateCustom } from "@/lib/email/catalogue";
+import { isDesign, type DesignId } from "@/lib/email/designs";
 import { renderHtml } from "@/lib/email/render";
 import { compile } from "@/lib/email/source";
 import { useConfirmSubmit, type ConfirmOptions } from "../../../ConfirmDialog";
+import { DesignPicker } from "../../DesignPicker";
 import { draftAction, type DraftState } from "../../mail-actions";
 
 type Contact = { id: string; name: string; email: string; status: string };
 type Logo = { id: string; name: string; width: number; src: string };
-type Draft = { id: string; subject: string; body: string; logoIds: string[]; recipientIds: string[]; audience: string };
+type Draft = { id: string; subject: string; body: string; logoIds: string[]; recipientIds: string[]; audience: string; design: string };
 
 const snapshot = (d: Omit<Draft, "id">) => JSON.stringify(d);
 
@@ -20,12 +22,14 @@ export function DraftEditor({
   stages,
   logos,
   testTo,
+  house,
 }: {
   draft: Draft;
   contacts: Contact[];
   stages: { value: string; label: string }[];
   logos: Logo[];
   testTo: string;
+  house: DesignId;
 }) {
   const [state, action, pending] = useActionState<DraftState, FormData>(draftAction, {});
   const [subject, setSubject] = useState(draft.subject);
@@ -33,8 +37,9 @@ export function DraftEditor({
   const [logoIds, setLogoIds] = useState(() => draft.logoIds.filter((id) => logos.some((l) => l.id === id)));
   const [recipientIds, setRecipientIds] = useState(() => draft.recipientIds.filter((id) => contacts.some((c) => c.id === id)));
   const [audience, setAudience] = useState(draft.audience);
+  const [design, setDesign] = useState(draft.design);
   const [search, setSearch] = useState("");
-  const current = { subject, body, logoIds, recipientIds, audience };
+  const current = { subject, body, logoIds, recipientIds, audience, design };
   const [saved, setSaved] = useState(() => snapshot({ ...draft, logoIds, recipientIds }));
   const dirty = snapshot(current) !== saved;
   const [guard, dialog] = useConfirmSubmit();
@@ -47,8 +52,8 @@ export function DraftEditor({
   const problems = validateCustom({ subject, body });
   const preview = useMemo(() => {
     const c = compile({ subject, body }, SAMPLE_VARS);
-    return { subject: c.subject, html: renderHtml(c.blocks, chosenLogos.map((l) => ({ src: l.src, width: l.width, alt: l.name }))) };
-  }, [subject, body, chosenLogos]);
+    return { subject: c.subject, html: renderHtml(c.blocks, chosenLogos.map((l) => ({ src: l.src, width: l.width, alt: l.name })), isDesign(design) ? design : house) };
+  }, [subject, body, chosenLogos, design, house]);
 
   const recipients = contacts.filter(
     (c) => recipientIds.includes(c.id) || audience === "all" || (audience !== "" && c.status === audience),
@@ -107,6 +112,7 @@ export function DraftEditor({
       {dialog}
       <input type="hidden" name="id" value={draft.id} />
       <input type="hidden" name="audience" value={audience} />
+      <input type="hidden" name="design" value={design} />
       {recipientIds.map((id) => <input key={id} type="hidden" name="recipient" value={id} />)}
       {logoIds.map((id) => <input key={id} type="hidden" name="logo" value={id} />)}
 
@@ -247,6 +253,8 @@ export function DraftEditor({
             </ul>
           )}
         </fieldset>
+
+        <DesignPicker value={design} onChange={setDesign} house={house} />
 
         {problems.length > 0 && (subject || body.trim()) && (
           <ul className="form-error email-problems" role="alert">

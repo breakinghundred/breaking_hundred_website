@@ -209,6 +209,8 @@ model EmailDraft {
   recipientIds String[]  @default([])
   /// A whole group: "" (none), "all", or a MemberStatus.
   audience     String    @default("")
+  /// Email design id, or "" for the house design.
+  design       String    @default("")
   createdBy    String?
   lastSentAt   DateTime?
   sentCount    Int       @default(0)

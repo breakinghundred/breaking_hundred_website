@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/dates";
+import { designChoices } from "@/lib/email/design-store";
 import { listLogos, logoPath } from "@/lib/email/logos";
 import { senderDetails } from "@/lib/email/send";
 import { requireAdminPage } from "@/lib/staff";
@@ -16,12 +17,13 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const draft = await db().emailDraft.findUnique({ where: { id } });
   if (!draft) notFound();
-  const [contacts, logos] = await Promise.all([
+  const [contacts, logos, designs] = await Promise.all([
     db().member.findMany({
       select: { id: true, firstName: true, lastName: true, email: true, status: true },
       orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
     }),
     listLogos(),
+    designChoices(),
   ]);
   const sender = senderDetails();
 
@@ -46,6 +48,7 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
             logoIds: draft.logoIds,
             recipientIds: draft.recipientIds,
             audience: draft.audience,
+            design: draft.design,
           }}
           contacts={contacts.map((c) => ({
             id: c.id,
@@ -56,6 +59,7 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
           stages={STAGE_ORDER.map((s) => ({ value: s, label: STAGES[s].label }))}
           logos={logos.map((l) => ({ id: l.id, name: l.name, width: l.width, src: logoPath(l.id) }))}
           testTo={staff.email}
+          house={designs.house}
         />
       </div>
     </section>

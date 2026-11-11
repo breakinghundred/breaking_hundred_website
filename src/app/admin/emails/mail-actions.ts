@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import type { MemberStatus, Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { SAMPLE_VARS, SENDABLE_TEMPLATE_IDS, validateCustom } from "@/lib/email/catalogue";
+import { draftDesign, saveHouseDesign, saveTemplateDesign } from "@/lib/email/design-store";
+import { isDesign } from "@/lib/email/designs";
 import { LOGO_MAX_BYTES, LOGO_MAX_WIDTH, LOGO_MIN_WIDTH, LOGO_TYPES, logosById } from "@/lib/email/logos";
 import { sendCustomEmail, sendMemberEmail, sendPreview } from "@/lib/email/send";
 import { compile } from "@/lib/email/source";
@@ -73,7 +75,9 @@ export async function draftAction(_prev: DraftState, formData: FormData): Promis
   const source = { subject: String(formData.get("subject") ?? "").trim(), body: String(formData.get("body") ?? "").replace(/\r\n/g, "\n").trim() };
   const audienceRaw = String(formData.get("audience") ?? "");
   const audience = audienceRaw === "all" || STAGE_ORDER.includes(audienceRaw as MemberStatus) ? audienceRaw : "";
-  const data = { ...source, audience, recipientIds: ids(formData, "recipient"), logoIds: ids(formData, "logo") };
+  const designRaw = String(formData.get("design") ?? "");
+  const data = { ...source, audience, recipientIds: ids(formData, "recipient"), logoIds: ids(formData, "logo"), design: isDesign(designRaw) ? designRaw : "" };
+  const design = await draftDesign(data.design);
 
   const found = await db().emailDraft.updateMany({ where: { id }, data });
   if (!found.count) return { errors: ["This draft has been deleted."] };
@@ -88,7 +92,7 @@ export async function draftAction(_prev: DraftState, formData: FormData): Promis
     if (!EMAIL.test(to)) return { errors: ["Enter a valid email address for the test."], savedAt: Date.now() };
     const { subject, blocks } = compile(source, SAMPLE_VARS);
     try {
-      await sendPreview(to, subject, blocks, await logosById(data.logoIds));
+      await sendPreview(to, subject, blocks, await logosById(data.logoIds), design);
     } catch (e) {
       return { errors: [`The test could not be sent. ${e instanceof Error ? e.message : String(e)}`], savedAt: Date.now() };
     }
@@ -101,7 +105,7 @@ export async function draftAction(_prev: DraftState, formData: FormData): Promis
     const members = await db().member.findMany({ where, orderBy: { createdAt: "asc" } });
     if (!members.length) return { errors: ["Nobody matches the people you chose."], savedAt: Date.now() };
     try {
-      const { sent } = await sendCustomEmail(members, source, { logoIds: data.logoIds, sendKey: `${id}:${Date.now()}` });
+      const { sent } = await sendCustomEmail(members, source, { logoIds: data.logoIds, design, sendKey: `${id}:${Date.now()}` });
       await db().emailDraft.update({ where: { id }, data: { lastSentAt: new Date(), sentCount: { increment: sent } } });
       revalidatePath("/admin", "layout");
       return { message: `Sent to ${sent} ${sent === 1 ? "person" : "people"}. You can find it on each person's details page.`, savedAt: Date.now() };
@@ -129,7 +133,7 @@ export async function sendToContactAction(_prev: AdminState, formData: FormData)
       if (!draft) return { error: "That draft has been deleted." };
       const problems = validateCustom(draft);
       if (problems.length) return { error: `That draft isn't ready: ${problems[0]}` };
-      await sendCustomEmail([member], draft, { logoIds: draft.logoIds, sendKey: `${draft.id}:${stamp}` });
+      await sendCustomEmail([member], draft, { logoIds: draft.logoIds, design: await draftDesign(draft.design), sendKey: `${draft.id}:${stamp}` });
       await db().emailDraft.update({ where: { id: draft.id }, data: { lastSentAt: new Date(), sentCount: { increment: 1 } } });
     } else if (SENDABLE_TEMPLATE_IDS.includes(what as TemplateId)) {
       await sendMemberEmail(member, what as TemplateId, { sendKey: `manual-${stamp}` });
@@ -217,4 +221,23 @@ export async function logoAction(_prev: AdminState, formData: FormData): Promise
   });
   revalidatePath("/admin/emails", "layout");
   return { message: "Saved." };
+}
+
+/* ---------- designs ---------- */
+
+/** Choose the house design, or one automated email's own design. */
+export async function designAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
+  const auth = await adminOrError();
+  if (!auth.staff) return { error: auth.error };
+  const design = String(formData.get("design") ?? "");
+  const template = String(formData.get("template") ?? "");
+  if (template) {
+    if (!/^C\d{2}$/.test(template)) return { error: "Something went wrong. Please refresh the page and try again." };
+    await saveTemplateDesign(template as TemplateId, isDesign(design) ? design : null);
+  } else {
+    if (!isDesign(design)) return { error: "Please choose a design." };
+    await saveHouseDesign(design);
+  }
+  revalidatePath("/admin/emails", "layout");
+  return { message: template ? "Saved." : "Done. Automated emails now go out in this design." };
 }

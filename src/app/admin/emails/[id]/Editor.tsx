@@ -10,10 +10,12 @@ import {
   defaultSource,
   validate,
 } from "@/lib/email/catalogue";
+import { isDesign, type DesignId } from "@/lib/email/designs";
 import { renderHtml, type LogoRef } from "@/lib/email/render";
 import { compile } from "@/lib/email/source";
 import type { TemplateId } from "@/lib/email/templates";
 import { useConfirmSubmit } from "../../ConfirmDialog";
+import { DesignPicker } from "../DesignPicker";
 import { editorAction, type EditorState } from "./actions";
 
 export function Editor({
@@ -22,17 +24,24 @@ export function Editor({
   body: savedBody,
   edited,
   logos,
+  design: savedDesign,
+  house,
 }: {
   id: TemplateId;
   subject: string;
   body: string;
   edited: boolean;
   logos: LogoRef[];
+  /** This email's own design, or "" for the house design. */
+  design: string;
+  house: DesignId;
 }) {
   const [state, action, pending] = useActionState<EditorState, FormData>(editorAction, {});
   const [subject, setSubject] = useState(savedSubject);
   const [body, setBody] = useState(savedBody);
-  const [saved, setSaved] = useState({ subject: savedSubject, body: savedBody });
+  const [design, setDesign] = useState(savedDesign);
+  const [saved, setSaved] = useState({ subject: savedSubject, body: savedBody, design: savedDesign });
+  const shown: DesignId = isDesign(design) ? design : house;
   const [guard, dialog] = useConfirmSubmit();
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
@@ -41,9 +50,9 @@ export function Editor({
   const problems = validate(id, { subject, body });
   const preview = useMemo(() => {
     const compiled = compile({ subject, body }, SAMPLE_VARS);
-    return { subject: compiled.subject, html: renderHtml(compiled.blocks, logos) };
-  }, [subject, body, logos]);
-  const dirty = subject !== saved.subject || body !== saved.body;
+    return { subject: compiled.subject, html: renderHtml(compiled.blocks, logos, shown) };
+  }, [subject, body, logos, shown]);
+  const dirty = subject !== saved.subject || body !== saved.body || design !== saved.design;
 
   const fields = { ...MERGE_FIELDS, ...Object.fromEntries((TEMPLATE_INFO[id].extra ?? []).map((f) => [f, EXTRA_FIELD_INFO[f]])) };
 
@@ -70,9 +79,9 @@ export function Editor({
           const original = defaultSource(id);
           setSubject(original.subject);
           setBody(original.body);
-          setSaved(original);
+          setSaved((s) => ({ ...original, design: s.design }));
         } else if (op === "save") {
-          setSaved({ subject, body });
+          setSaved({ subject, body, design });
         }
         return action(fd);
       }}
@@ -89,6 +98,7 @@ export function Editor({
     >
       {dialog}
       <input type="hidden" name="id" value={id} />
+      <input type="hidden" name="design" value={design} />
 
       <div className="email-editor-main">
         <label className="email-field">
@@ -127,6 +137,8 @@ export function Editor({
             <li>Links are made clickable automatically. A line whose merge fields are all empty is left out.</li>
           </ul>
         </details>
+
+        <DesignPicker value={design} onChange={setDesign} house={house} />
 
         {problems.length > 0 && (
           <ul className="form-error email-problems" role="alert">

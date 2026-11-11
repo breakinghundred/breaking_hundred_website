@@ -5,6 +5,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { db } from "../db";
 import { optionalEnv } from "../env";
 import { getSettings } from "../settings";
+import { designFor, designChoices } from "./design-store";
+import type { DesignId } from "./designs";
 import { NO_LOGOS, automatedLogos, logosById, type EmailLogos } from "./logos";
 import { renderHtml, renderText } from "./render";
 import { compile, type Source } from "./source";
@@ -22,13 +24,13 @@ function resend() {
 const FROM = () => optionalEnv("EMAIL_FROM") ?? "Breaking Hundred <circle@breakinghundred.org>";
 const REPLY_TO = () => optionalEnv("EMAIL_REPLY_TO") ?? "admin@breakinghundred.org";
 
-type Raw = { to: string; subject: string; blocks: Block[]; logos?: EmailLogos; scheduledAt?: Date; idempotencyKey?: string };
+type Raw = { to: string; subject: string; blocks: Block[]; logos?: EmailLogos; design?: DesignId; scheduledAt?: Date; idempotencyKey?: string };
 
 /** Resend won't schedule an email with attachments, so a scheduled email drops inline (cid:) logos. */
 const forSend = (logos: EmailLogos, scheduled: boolean) => (scheduled && logos.attachments.length ? NO_LOGOS : logos);
 
 /** Low-level send. Without RESEND_API_KEY in development, prints the email instead. */
-async function deliver({ to, subject, blocks, logos: chosen = NO_LOGOS, scheduledAt, idempotencyKey }: Raw): Promise<string | null> {
+async function deliver({ to, subject, blocks, logos: chosen = NO_LOGOS, design, scheduledAt, idempotencyKey }: Raw): Promise<string | null> {
   const r = resend();
   const scheduled = !!scheduledAt && scheduledAt.getTime() > Date.now() + 30_000;
   const logos = forSend(chosen, scheduled);
@@ -43,7 +45,7 @@ async function deliver({ to, subject, blocks, logos: chosen = NO_LOGOS, schedule
       to,
       replyTo: REPLY_TO(),
       subject,
-      html: renderHtml(blocks, logos.refs),
+      html: renderHtml(blocks, logos.refs, design),
       text: renderText(blocks),
       ...(logos.attachments.length ? { attachments: logos.attachments } : {}),
       ...(scheduled ? { scheduledAt: scheduledAt!.toISOString() } : {}),
@@ -80,11 +82,13 @@ export async function sendMemberEmail(
     const settings = await getSettings();
     const vars = { ...memberVars(member, settings), ...opts.vars };
     const { subject, blocks } = compile(await getSource(templateId), vars);
+    const [logos, design] = await Promise.all([automatedLogos(), designFor(templateId)]);
     const resendId = await deliver({
       to: member.email,
       subject,
       blocks,
-      logos: await automatedLogos(),
+      logos,
+      design,
       scheduledAt: opts.scheduledAt,
       idempotencyKey: `${member.id}:${templateId}:${sendKey}`.slice(0, 256),
     });
@@ -98,8 +102,8 @@ export async function sendMemberEmail(
 }
 
 /** Test send of a template from /admin, with sample values. Not logged. */
-export async function sendPreview(to: string, subject: string, blocks: Block[], logos?: EmailLogos) {
-  await deliver({ to, subject: `[Test] ${subject}`, blocks, logos: logos ?? (await automatedLogos()) });
+export async function sendPreview(to: string, subject: string, blocks: Block[], logos?: EmailLogos, design?: DesignId) {
+  await deliver({ to, subject: `[Test] ${subject}`, blocks, logos: logos ?? (await automatedLogos()), design: design ?? (await designChoices()).house });
 }
 
 /**
@@ -107,14 +111,14 @@ export async function sendPreview(to: string, subject: string, blocks: Block[], 
  * doesn't hit the per-second rate limit. Not logged. Returns false when email isn't
  * set up and the emails were printed to the server log instead (development only).
  */
-export async function sendPreviews(to: string, emails: { subject: string; blocks: Block[] }[]): Promise<boolean> {
+export async function sendPreviews(to: string, emails: { subject: string; blocks: Block[]; design?: DesignId }[]): Promise<boolean> {
   const r = resend();
-  const logos = await automatedLogos();
+  const [logos, { house }] = await Promise.all([automatedLogos(), designChoices()]);
   if (!r || logos.attachments.length) {
     // The batch API can't carry attachments, so inline logos go one at a time.
     for (const [n, e] of emails.entries()) {
       if (r && n) await pause();
-      await deliver({ to, subject: `[Test] ${e.subject}`, blocks: e.blocks, logos });
+      await deliver({ to, subject: `[Test] ${e.subject}`, blocks: e.blocks, logos, design: e.design ?? house });
     }
     return !!r;
   }
@@ -125,7 +129,7 @@ export async function sendPreviews(to: string, emails: { subject: string; blocks
         to,
         replyTo: REPLY_TO(),
         subject: `[Test] ${e.subject}`,
-        html: renderHtml(e.blocks, logos.refs),
+        html: renderHtml(e.blocks, logos.refs, e.design ?? house),
         text: renderText(e.blocks),
       })),
     );
@@ -148,7 +152,7 @@ export const CUSTOM_EMAIL = "custom";
 export async function sendCustomEmail(
   members: Member[],
   source: Source,
-  opts: { logoIds: string[]; sendKey: string },
+  opts: { logoIds: string[]; sendKey: string; design: DesignId },
 ): Promise<{ sent: number; skipped: number }> {
   if (!members.length) return { sent: 0, skipped: 0 };
   const [settings, logos] = await Promise.all([getSettings(), logosById(opts.logoIds)]);
@@ -184,7 +188,7 @@ export async function sendCustomEmail(
         // One at a time: without Resend (development), or with inline logos, which the batch API can't carry.
         for (const [n, c] of claimed.entries()) {
           if (r && n) await pause();
-          const id = await deliver({ to: c.member.email, subject: c.subject, blocks: c.blocks, logos, idempotencyKey: `${opts.sendKey}:${c.member.id}`.slice(0, 256) });
+          const id = await deliver({ to: c.member.email, subject: c.subject, blocks: c.blocks, logos, design: opts.design, idempotencyKey: `${opts.sendKey}:${c.member.id}`.slice(0, 256) });
           done.add(c.logId);
           sent++;
           if (id) await db().emailLog.update({ where: { id: c.logId }, data: { resendId: id } });
@@ -196,7 +200,7 @@ export async function sendCustomEmail(
             to: c.member.email,
             replyTo: REPLY_TO(),
             subject: c.subject,
-            html: renderHtml(c.blocks, logos.refs),
+            html: renderHtml(c.blocks, logos.refs, opts.design),
             text: renderText(c.blocks),
           })),
           { idempotencyKey: `${opts.sendKey}:${i}`.slice(0, 256) },

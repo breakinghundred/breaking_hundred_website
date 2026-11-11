@@ -268,7 +268,6 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     <th>Paid</th>
                     <th>Renews</th>
                     <th>Academy</th>
-                    <th>Notes</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -280,7 +279,6 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                       <td><Paid m={m} /></td>
                       <td className="nowrap"><Renews m={m} /></td>
                       <td><Academy m={m} /></td>
-                      <td className="small notes"><Notes m={m} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -300,11 +298,6 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     <div><dt>Renews</dt><dd><Renews m={m} /></dd></div>
                     <div><dt>Academy</dt><dd><Academy m={m} /></dd></div>
                   </dl>
-                  {hasNotes(m) && (
-                    <div className="member-card-notes small notes">
-                      <Notes m={m} />
-                    </div>
-                  )}
                   <Link href={`/admin/members/${m.id}`} className="member-card-more small">
                     View details →
                   </Link>
@@ -322,8 +315,6 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
 type Row = Member;
 const fullName = (m: Row) => `${m.firstName} ${m.lastName}`.trim() || m.email;
 const inCircle = (m: Row) => m.status === "in_circle" || m.status === "academy_complete";
-const canLinkMighty = (m: Row) => m.status === "paid" || m.status === "invited" || m.status === "joined_network";
-const hasNotes = (m: Row) => m.followUpFlag || !!m.contributorTrack || canLinkMighty(m);
 
 function MemberName({ m }: { m: Row }) {
   return (
@@ -388,32 +379,5 @@ function Academy({ m }: { m: Row }) {
       <span style={{ width: `${m.academyProgressPct}%` }} />
       <em>{m.academyProgressPct}%</em>
     </div>
-  );
-}
-
-function Notes({ m }: { m: Row }) {
-  return (
-    <>
-      {m.followUpFlag && <div className="warn">Needs a personal follow-up</div>}
-      {m.contributorTrack && <div>Wants to contribute: {m.contributorTrack}</div>}
-      {m.contributorTrack?.includes("Mentor") && (
-        <ActionForm action={memberAction}>
-          <input type="hidden" name="id" value={m.id} />
-          <button name="op" value="mentor" className="link-btn">
-            {m.mentorMatched ? "Mentor matched ✓ (undo)" : "Mark mentor matched"}
-          </button>
-        </ActionForm>
-      )}
-      {canLinkMighty(m) && (
-        <details className="mini">
-          <summary>Joined the platform with a different email?</summary>
-          <ActionForm action={memberAction} className="inline">
-            <input type="hidden" name="id" value={m.id} />
-            <input name="mnEmail" type="email" placeholder="Email she used there" className="admin-input" aria-label="Email she used on Mighty Networks" />
-            <button name="op" value="link-mighty" className="link-btn">Link</button>
-          </ActionForm>
-        </details>
-      )}
-    </>
   );
 }

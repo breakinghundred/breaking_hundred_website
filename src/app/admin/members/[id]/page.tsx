@@ -69,7 +69,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
         <p>
           <span className={`badge ${stage.tone}`}>{stage.label}</span> <span className="muted small">{stage.help}</span>
         </p>
-        {m.followUpFlag && <p className="warn small">Needs a personal follow-up{m.followUpReason ? `: ${m.followUpReason}` : "."}</p>}
+        {m.followUpFlag && <p className="warn small">Needs a personal follow-up. <a href="#notes">See notes</a></p>}
 
         <div className="detail-grid">
           <div className="detail-card">
@@ -163,19 +163,72 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
             )}
           </div>
 
-          {(m.contributorTrack || m.notes) && (
-            <div className="detail-card">
-              <h2>Notes</h2>
-              <Rows
-                rows={[
-                  ...(m.contributorTrack ? ([["Wants to contribute as", m.contributorTrack]] as [string, ReactNode][]) : []),
-                  ...(m.contributorNote ? ([["What she said", m.contributorNote]] as [string, ReactNode][]) : []),
-                  ...(m.contributorTrack?.includes("Mentor") ? ([["Mentor matched", m.mentorMatched ? "Yes" : "Not yet"]] as [string, ReactNode][]) : []),
-                  ...(m.notes ? ([["Team notes", m.notes]] as [string, ReactNode][]) : []),
-                ]}
-              />
+          <div className="detail-card notes-card" id="notes">
+            <h2>Notes</h2>
+
+            {m.followUpFlag && (
+              <div className="notes-block notes-flag">
+                <p className="warn small">Needs a personal follow-up{m.followUpReason ? `: ${m.followUpReason}` : "."}</p>
+                <ActionForm action={memberAction} className="inline">
+                  <input type="hidden" name="id" value={m.id} />
+                  <button name="op" value="clear-flag" className="button small outline"><span>Mark as done</span></button>
+                </ActionForm>
+              </div>
+            )}
+
+            <div className="notes-block">
+              <h3 className="notes-h">Team notes</h3>
+              <p className="small muted">Only the team sees these. Anything worth remembering about her: calls, promises, preferences.</p>
+              <ActionForm action={memberAction} className="notes-form">
+                <input type="hidden" name="id" value={m.id} />
+                <textarea
+                  name="notes"
+                  defaultValue={m.notes ?? ""}
+                  rows={5}
+                  className="textarea"
+                  aria-label="Team notes"
+                  placeholder="e.g. Called on 12 Nov, will pay by bank transfer at the end of the month."
+                />
+                <button name="op" value="note" className="button small"><span>Save notes</span></button>
+              </ActionForm>
             </div>
-          )}
+
+            {m.contributorTrack && (
+              <div className="notes-block">
+                <h3 className="notes-h">Giving back</h3>
+                <Rows
+                  rows={[
+                    ["Wants to contribute as", m.contributorTrack],
+                    ...(m.contributorNote ? ([["What she said", m.contributorNote]] as [string, ReactNode][]) : []),
+                    ...(m.contributorTrack.includes("Mentor") ? ([["Mentor matched", m.mentorMatched ? "Yes" : "Not yet"]] as [string, ReactNode][]) : []),
+                  ]}
+                />
+                {m.contributorTrack.includes("Mentor") && (
+                  <ActionForm action={memberAction} className="inline">
+                    <input type="hidden" name="id" value={m.id} />
+                    <button name="op" value="mentor" className="button small outline">
+                      <span>{m.mentorMatched ? "Undo mentor match" : "Mark mentor matched"}</span>
+                    </button>
+                  </ActionForm>
+                )}
+              </div>
+            )}
+
+            {(m.status === "paid" || m.status === "invited" || m.status === "joined_network") && (
+              <div className="notes-block">
+                <h3 className="notes-h">Joined the platform with a different email?</h3>
+                <p className="small muted">
+                  If she signed up to Mighty Networks with another address, enter it here so we can match her up and add her to her spaces.
+                  {m.mnEmail ? ` Currently linked to ${m.mnEmail}.` : ""}
+                </p>
+                <ActionForm action={memberAction} className="inline">
+                  <input type="hidden" name="id" value={m.id} />
+                  <input name="mnEmail" type="email" required placeholder="Email she used there" className="admin-input" aria-label="Email she used on Mighty Networks" />
+                  <button name="op" value="link-mighty" className="button small outline"><span>Link</span></button>
+                </ActionForm>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </section>
