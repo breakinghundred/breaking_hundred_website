@@ -54,7 +54,8 @@ export function Footer() {
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} Breaking Hundred Circle CIC</span>
           <span>
-            <a href={site.privacy}>Privacy policy</a> · <a href={`mailto:${site.email}`}>{site.email}</a>
+            <a href={site.privacy}>Privacy policy</a> · <a href={`mailto:${site.email}`}>{site.email}</a> ·{" "}
+            <a href="/admin" rel="nofollow">Admin</a>
           </span>
           <span>
             Developed by{" "}

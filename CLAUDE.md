@@ -43,7 +43,7 @@ npx tsx --conditions=react-server --env-file=.env.local scripts/flow-test.ts
 ## Where things are
 
 - Public pages: `/interest`, `/join` (personal payment page), `/join/thanks`, `/billing` (opens a Stripe portal session), `/contribute`.
-- `/admin` uses HTTP Basic auth, with user `admin` and password `ADMIN_PASSWORD`. `src/proxy.ts` prompts for it, and `requireAdmin()` re-checks it in every admin page and Server Action.
+- `/admin` is password-protected by a sign-in page at `/admin/login` (password `ADMIN_PASSWORD`; no username, no browser prompt). Success sets an HttpOnly `circle_admin` cookie signed with `LINK_SECRET` + `ADMIN_PASSWORD` (`src/lib/admin-session.ts`), valid 12 hours; changing the password signs everyone out. `src/proxy.ts` redirects to the sign-in page without it, and `requireAdmin()` re-checks it in every admin page and Server Action. Sign-in attempts are rate-limited (5 per 15 minutes per IP, fails closed if the database is down). The footer has a plain `<a href="/admin">` link.
 - Webhooks: `/api/stripe/webhook` and `/api/mn/webhook`. The Mighty Networks one checks `Authorization` against `MN_WEBHOOK_SECRET`, because Mighty Networks doesn't sign its webhooks. The field names in its payloads are unconfirmed, so check the stored `MightyEvent.payload` against a live delivery.
 - Daily cron: `/api/cron/daily` (`vercel.json`, Bearer `CRON_SECRET`) runs `src/lib/jobs.ts`.
 - Domain logic: `src/lib/members.ts`. Alerts A1–A4: `src/lib/alerts.ts`.

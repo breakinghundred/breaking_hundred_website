@@ -1,17 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { ADMIN_COOKIE, verifySession } from "@/lib/admin-session";
 
-/** Asks for the admin password before /admin loads. Each page and action re-checks it. */
+/** Sends visitors without an admin session to the sign-in page. Each page and action re-checks it. */
 export function proxy(req: NextRequest) {
-  const password = process.env.ADMIN_PASSWORD;
-  const header = req.headers.get("authorization") ?? "";
-  if (password && header.startsWith("Basic ")) {
-    const [user, ...rest] = atob(header.slice(6)).split(":");
-    if (user === "admin" && rest.join(":") === password) return NextResponse.next();
-  }
-  return new NextResponse("Authentication required", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="The Circle admin", charset="UTF-8"' },
-  });
+  const { pathname, search } = req.nextUrl;
+  if (pathname === "/admin/login") return NextResponse.next();
+  if (verifySession(req.cookies.get(ADMIN_COOKIE)?.value)) return NextResponse.next();
+
+  const url = req.nextUrl.clone();
+  url.pathname = "/admin/login";
+  url.search = pathname === "/admin" && !search ? "" : `?next=${encodeURIComponent(pathname + search)}`;
+  return NextResponse.redirect(url);
 }
 
 export const config = { matcher: ["/admin", "/admin/:path*"] };

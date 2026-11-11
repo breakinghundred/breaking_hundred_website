@@ -1018,3 +1018,8 @@ form.inline .admin-msg { margin-top: 0; }
   .email-editor { grid-template-columns: 1fr; }
   .email-side { position: static; }
 }
+
+/* admin sign in */
+.login-wrap { max-width: 520px; }
+.login-form { grid-template-columns: 1fr; margin-top: 0; }
+.admin-bar { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }

@@ -8,6 +8,7 @@ import { countryName } from "@/lib/countries";
 import { mightyConfigured } from "@/lib/mighty";
 import { SETTING_FIELDS, getSettings } from "@/lib/settings";
 import { ActionForm } from "./ActionForm";
+import { signOut } from "./login/actions";
 import {
   importAction,
   memberAction,
@@ -68,7 +69,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <div className="wrap">
         <span className="eyebrow" style={{ color: "var(--wine)" }}>The Circle</span>
         <h1 className="flow-title">Member admin</h1>
-        <p className="small"><Link href="/admin/emails">Edit email templates →</Link></p>
+        <div className="admin-bar small">
+          <Link href="/admin/emails">Edit email templates →</Link>
+          <form action={signOut}>
+            <button type="submit" className="link-btn">Sign out</button>
+          </form>
+        </div>
 
         <nav className="admin-pills" aria-label="Filter by status">
           <Link href="/admin" className={!filterStatus && !flag ? "on" : ""}>All</Link>
