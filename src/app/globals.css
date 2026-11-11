@@ -1099,6 +1099,12 @@ details.mini form { margin-top: 8px; }
 .team-add { display: grid; grid-template-columns: 1fr 1fr 160px auto; gap: 12px; align-items: end; max-width: 980px; }
 .team-add label { display: grid; gap: 4px; font-weight: 600; font-size: 0.9rem; }
 .team-add .admin-input { padding: 10px; }
+.test-emails { margin: 24px 0 32px; max-width: 980px; }
+.test-emails-form { display: grid; grid-template-columns: 1fr 1.3fr auto; gap: 12px; align-items: end; margin: 12px 0; }
+.test-emails-form label { display: grid; gap: 4px; font-weight: 600; }
+.test-emails-form .admin-input { padding: 10px; }
+.test-emails-form .admin-msg { grid-column: 1 / -1; }
+@media (max-width: 760px) { .test-emails-form { grid-template-columns: 1fr; } }
 @media (max-width: 860px) { .team-add { grid-template-columns: 1fr; } }
 .row-muted td { color: #8a7c85; }
 .link-btn.danger { color: #a3262d; }

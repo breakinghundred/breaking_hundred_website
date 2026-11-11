@@ -94,6 +94,36 @@ export async function sendPreview(to: string, subject: string, blocks: Block[]) 
   await deliver({ to, subject: `[Test] ${subject}`, blocks });
 }
 
+/**
+ * Send several test emails in one request (Resend batch, up to 100), so a full set
+ * doesn't hit the per-second rate limit. Not logged. Returns false when email isn't
+ * set up and the emails were printed to the server log instead (development only).
+ */
+export async function sendPreviews(to: string, emails: { subject: string; blocks: Block[] }[]): Promise<boolean> {
+  const r = resend();
+  if (!r) {
+    for (const e of emails) await deliver({ to, subject: `[Test] ${e.subject}`, blocks: e.blocks });
+    return false;
+  }
+  for (let i = 0; i < emails.length; i += 100) {
+    const { error } = await r.batch.send(
+      emails.slice(i, i + 100).map((e) => ({
+        from: FROM(),
+        to,
+        replyTo: REPLY_TO(),
+        subject: `[Test] ${e.subject}`,
+        html: renderHtml(e.blocks),
+        text: renderText(e.blocks),
+      })),
+    );
+    if (error) throw new Error(`Resend: ${error.message}`);
+  }
+  return true;
+}
+
+/** Who test and team emails come from, for showing in /admin. */
+export const senderDetails = () => ({ from: FROM(), replyTo: REPLY_TO(), configured: !!optionalEnv("RESEND_API_KEY") });
+
 /** Plain email to the team inbox (alerts A1–A4). */
 export async function sendTeamEmail(to: string, subject: string, lines: string[]) {
   await deliver({ to, subject, blocks: lines });
