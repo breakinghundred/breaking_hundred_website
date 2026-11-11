@@ -105,6 +105,8 @@ model EmailLog {
   /// Distinguishes legitimate repeats (e.g. "3d"/"7d", an invoice id).
   sendKey    String   @default("")
   toEmail    String
+  /// Subject as sent (always set for custom emails, which have no catalogue name).
+  subject    String?
   resendId   String?
   scheduledAt DateTime?
   sentAt     DateTime @default(now())
@@ -194,4 +196,38 @@ model StaffUser {
   lastSignInAt   DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+/// An email written by the team in /admin/emails/drafts, sent to chosen contacts.
+model EmailDraft {
+  id           String    @id @default(cuid())
+  subject      String    @default("")
+  body         String    @default("")
+  /// EmailLogo ids shown in the header, in order.
+  logoIds      String[]  @default([])
+  /// Contacts picked one by one (Member ids).
+  recipientIds String[]  @default([])
+  /// A whole group: "" (none), "all", or a MemberStatus.
+  audience     String    @default("")
+  createdBy    String?
+  lastSentAt   DateTime?
+  sentCount    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+/// A logo uploaded in /admin/emails/logos. Served publicly at /email-logo/<id>.
+model EmailLogo {
+  id          String    @id @default(cuid())
+  name        String
+  contentType String
+  data        Bytes
+  /// Display width in emails, in pixels.
+  width       Int       @default(160)
+  /// Shown at the top of the automated emails.
+  inAutomated Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  /// Removed from the library. The file is still served so emails already sent keep their logo.
+  removedAt   DateTime?
+  createdAt   DateTime  @default(now())
 }

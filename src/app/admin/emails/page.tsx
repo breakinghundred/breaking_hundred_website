@@ -3,11 +3,12 @@ import Link from "next/link";
 import { requireAdminPage } from "@/lib/staff";
 import { senderDetails } from "@/lib/email/send";
 import { ActionForm } from "../ActionForm";
+import { MailHeader } from "./MailNav";
 import { testEmailsAction } from "./actions";
 import { TEMPLATE_IDS, TEMPLATE_INFO } from "@/lib/email/catalogue";
 import { editedIds, getSource } from "@/lib/email/store";
 
-export const metadata: Metadata = { title: "Email templates", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Automated emails", robots: { index: false, follow: false } };
 
 export default async function EmailsPage() {
   const staff = await requireAdminPage();
@@ -18,13 +19,17 @@ export default async function EmailsPage() {
   return (
     <section className="section flow-page admin">
       <div className="wrap">
-        <p className="small"><Link href="/admin">← Member admin</Link></p>
-        <span className="eyebrow" style={{ color: "var(--wine)" }}>The Circle</span>
-        <h1 className="flow-title">Email templates</h1>
-        <p className="muted" style={{ maxWidth: 720 }}>
-          Edit the wording of any automated email. Changes apply to the next email sent; emails already sent or
-          scheduled are not changed. Each email can be reset to its original wording.
-        </p>
+        <MailHeader
+          active="automated"
+          title="Automated emails"
+          intro={
+            <>
+              These go out by themselves as members move through the journey. Edit the wording of any of them: changes
+              apply to the next email sent, and each can be reset to its original wording. Choose which logos appear at
+              the top on the <Link href="/admin/emails/logos">Logos</Link> page.
+            </>
+          }
+        />
         <div className="detail-card test-emails">
           <h2>Send test emails</h2>
           <p className="small muted">

@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { MemberStatus } from "@/generated/prisma/client";
+import type { Member, MemberStatus } from "@/generated/prisma/client";
 import { requireStaff } from "@/lib/staff";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/dates";
 import { countryName } from "@/lib/countries";
-import { paymentChangesFor } from "@/lib/members";
 import { mightyConfigured } from "@/lib/mighty";
 import { ActionForm } from "./ActionForm";
-import { PaymentStatusForm } from "./PaymentStatusForm";
 import { signOut } from "./login/actions";
 import { ALERT_TITLES, STAGES, STAGE_ORDER, billingLabel, plain } from "./labels";
 import {
@@ -73,7 +71,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           <nav className="dash-links" aria-label="Admin">
             {isAdmin && (
               <>
-                <Link href="/admin/emails" className="button outline small"><span>Edit email wording</span></Link>
+                <Link href="/admin/emails/drafts" className="button outline small"><span>Emails</span></Link>
                 <Link href="/admin/settings" className="button outline small"><span>Settings</span></Link>
                 <Link href="/admin/team" className="button outline small"><span>Team</span></Link>
               </>
@@ -250,113 +248,163 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         {members.length === 0 ? (
           <p className="dash-clear">{q ? `Nobody matches “${q}”.` : "Nobody here yet."}</p>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Stage</th>
-                  <th>Signed up</th>
-                  <th>Paid</th>
-                  <th>Renews</th>
-                  <th>Academy</th>
-                  <th>Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map((m) => {
-                  const stage = STAGES[m.status];
-                  const inCircle = m.status === "in_circle" || m.status === "academy_complete";
-                  return (
+          <>
+            <div className="admin-table-wrap members-table">
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Stage</th>
+                    <th>Signed up</th>
+                    <th>Paid</th>
+                    <th>Renews</th>
+                    <th>Academy</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map((m) => (
                     <tr key={m.id}>
-                      <td>
-                        <Link href={`/admin/members/${m.id}`} className="member-link">
-                          <strong>
-                            {`${m.firstName} ${m.lastName}`.trim() || m.email}
-                          </strong>
-                        </Link>
-                        <div className="muted small">{m.email}</div>
-                        {(m.phone || m.country) && (
-                          <div className="muted small">{[m.phone, countryName(m.country)].filter(Boolean).join(" · ")}</div>
-                        )}
-                        {m.mnEmail && <div className="muted small">Platform email: {m.mnEmail}</div>}
-                      </td>
-                      <td data-label="Stage">
-                        <span className={`badge ${stage.tone}`}>{stage.label}</span>
-                        <div className="muted small stage-help">{stage.help}</div>
-                      </td>
-                      <td className="nowrap" data-label="Signed up">{formatDate(m.createdAt)}</td>
-                      <td data-label="Paid">
-                        <Link href={`/admin/members/${m.id}`} className="nowrap">{m.paidAt ? formatDate(m.paidAt) : "Not paid"}</Link>
-                        {m.priceTier === "manual" && <div className="muted small">Recorded by the team</div>}
-                        {m.status === "payment_open" && (
-                          <ActionForm action={memberAction} confirm={{ title: `Email ${m.firstName} her payment link again?`, message: `It will go to ${m.email}.`, confirmLabel: "Send link" }}>
-                            <input type="hidden" name="id" value={m.id} />
-                            <button name="op" value="resend-link" className="link-btn">Resend payment link</button>
-                          </ActionForm>
-                        )}
-                        {isAdmin && (
-                          <details className="mini">
-                            <summary>Change payment status</summary>
-                            <PaymentStatusForm id={m.id} name={`${m.firstName} ${m.lastName}`.trim()} options={paymentChangesFor(m.status)} />
-                          </details>
-                        )}
-                      </td>
-                      <td className="nowrap" data-label="Renews">
-                        {m.renewalDate ? formatDate(m.renewalDate) : "—"}
-                        {m.subscriptionStatus && m.subscriptionStatus !== "active" && (
-                          <div className={`small ${m.subscriptionStatus === "payment_failed" ? "warn" : "muted"}`}>
-                            {billingLabel(m.subscriptionStatus)}
-                          </div>
-                        )}
-                      </td>
-                      <td data-label="Academy">
-                        {inCircle ? (
-                          <div className="progress" title={`${m.academyProgressPct}% complete`}>
-                            <span style={{ width: `${m.academyProgressPct}%` }} />
-                            <em>{m.academyProgressPct}%</em>
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="small notes">
-                        {m.followUpFlag && <div className="warn">Needs a personal follow-up</div>}
-                        {m.contributorTrack && <div>Wants to contribute: {m.contributorTrack}</div>}
-                        {m.contributorTrack?.includes("Mentor") && (
-                          <ActionForm action={memberAction}>
-                            <input type="hidden" name="id" value={m.id} />
-                            <button name="op" value="mentor" className="link-btn">
-                              {m.mentorMatched ? "Mentor matched ✓ (undo)" : "Mark mentor matched"}
-                            </button>
-                          </ActionForm>
-                        )}
-                        {(m.status === "paid" || m.status === "invited" || m.status === "joined_network") && (
-                          <details className="mini">
-                            <summary>Joined the platform with a different email?</summary>
-                            <ActionForm action={memberAction} className="inline">
-                              <input type="hidden" name="id" value={m.id} />
-                              <input
-                                name="mnEmail"
-                                type="email"
-                                placeholder="Email she used there"
-                                className="admin-input"
-                                aria-label="Email she used on Mighty Networks"
-                              />
-                              <button name="op" value="link-mighty" className="link-btn">Link</button>
-                            </ActionForm>
-                          </details>
-                        )}
-                      </td>
+                      <td><MemberName m={m} /></td>
+                      <td><Stage m={m} /></td>
+                      <td className="nowrap">{formatDate(m.createdAt)}</td>
+                      <td><Paid m={m} /></td>
+                      <td className="nowrap"><Renews m={m} /></td>
+                      <td><Academy m={m} /></td>
+                      <td className="small notes"><Notes m={m} /></td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <ul className="member-cards">
+              {members.map((m) => (
+                <li key={m.id} className="member-card">
+                  <div className="member-card-head">
+                    <MemberName m={m} />
+                    <span className={`badge ${STAGES[m.status].tone}`}>{STAGES[m.status].label}</span>
+                  </div>
+                  <dl className="member-card-facts">
+                    <div><dt>Signed up</dt><dd>{formatDate(m.createdAt)}</dd></div>
+                    <div><dt>Paid</dt><dd><Paid m={m} /></dd></div>
+                    <div><dt>Renews</dt><dd><Renews m={m} /></dd></div>
+                    <div><dt>Academy</dt><dd><Academy m={m} /></dd></div>
+                  </dl>
+                  {hasNotes(m) && (
+                    <div className="member-card-notes small notes">
+                      <Notes m={m} />
+                    </div>
+                  )}
+                  <Link href={`/admin/members/${m.id}`} className="member-card-more small">
+                    View details →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
       </div>
     </section>
+  );
+}
+
+type Row = Member;
+const fullName = (m: Row) => `${m.firstName} ${m.lastName}`.trim() || m.email;
+const inCircle = (m: Row) => m.status === "in_circle" || m.status === "academy_complete";
+const canLinkMighty = (m: Row) => m.status === "paid" || m.status === "invited" || m.status === "joined_network";
+const hasNotes = (m: Row) => m.followUpFlag || !!m.contributorTrack || canLinkMighty(m);
+
+function MemberName({ m }: { m: Row }) {
+  return (
+    <div className="member-name">
+      <Link href={`/admin/members/${m.id}`} className="member-link">
+        <strong>{fullName(m)}</strong>
+      </Link>
+      <div className="muted small">{m.email}</div>
+      {(m.phone || m.country) && (
+        <div className="muted small">{[m.phone, countryName(m.country)].filter(Boolean).join(" · ")}</div>
+      )}
+      {m.mnEmail && <div className="muted small">Platform email: {m.mnEmail}</div>}
+    </div>
+  );
+}
+
+function Stage({ m }: { m: Row }) {
+  const stage = STAGES[m.status];
+  return (
+    <>
+      <span className={`badge ${stage.tone}`}>{stage.label}</span>
+      <div className="muted small stage-help">{stage.help}</div>
+    </>
+  );
+}
+
+function Paid({ m }: { m: Row }) {
+  return (
+    <>
+      <span className="nowrap">{m.paidAt ? formatDate(m.paidAt) : "Not paid"}</span>
+      {m.priceTier === "manual" && <div className="muted small">Recorded by the team</div>}
+      {m.status === "payment_open" && (
+        <ActionForm
+          action={memberAction}
+          confirm={{ title: `Email ${m.firstName} her payment link again?`, message: `It will go to ${m.email}.`, confirmLabel: "Send link" }}
+        >
+          <input type="hidden" name="id" value={m.id} />
+          <button name="op" value="resend-link" className="link-btn">Resend payment link</button>
+        </ActionForm>
+      )}
+    </>
+  );
+}
+
+function Renews({ m }: { m: Row }) {
+  return (
+    <>
+      {m.renewalDate ? formatDate(m.renewalDate) : "—"}
+      {m.subscriptionStatus && m.subscriptionStatus !== "active" && (
+        <div className={`small ${m.subscriptionStatus === "payment_failed" ? "warn" : "muted"}`}>
+          {billingLabel(m.subscriptionStatus)}
+        </div>
+      )}
+    </>
+  );
+}
+
+function Academy({ m }: { m: Row }) {
+  if (!inCircle(m)) return <>—</>;
+  return (
+    <div className="progress" title={`${m.academyProgressPct}% complete`}>
+      <span style={{ width: `${m.academyProgressPct}%` }} />
+      <em>{m.academyProgressPct}%</em>
+    </div>
+  );
+}
+
+function Notes({ m }: { m: Row }) {
+  return (
+    <>
+      {m.followUpFlag && <div className="warn">Needs a personal follow-up</div>}
+      {m.contributorTrack && <div>Wants to contribute: {m.contributorTrack}</div>}
+      {m.contributorTrack?.includes("Mentor") && (
+        <ActionForm action={memberAction}>
+          <input type="hidden" name="id" value={m.id} />
+          <button name="op" value="mentor" className="link-btn">
+            {m.mentorMatched ? "Mentor matched ✓ (undo)" : "Mark mentor matched"}
+          </button>
+        </ActionForm>
+      )}
+      {canLinkMighty(m) && (
+        <details className="mini">
+          <summary>Joined the platform with a different email?</summary>
+          <ActionForm action={memberAction} className="inline">
+            <input type="hidden" name="id" value={m.id} />
+            <input name="mnEmail" type="email" placeholder="Email she used there" className="admin-input" aria-label="Email she used on Mighty Networks" />
+            <button name="op" value="link-mighty" className="link-btn">Link</button>
+          </ActionForm>
+        </details>
+      )}
+    </>
   );
 }

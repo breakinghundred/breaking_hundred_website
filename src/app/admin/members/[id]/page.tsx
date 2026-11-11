@@ -12,6 +12,7 @@ import { paymentChangesFor } from "@/lib/members";
 import { ActionForm } from "../../ActionForm";
 import { PaymentStatusForm } from "../../PaymentStatusForm";
 import { memberAction } from "../../actions";
+import { newDraftAction } from "../../emails/mail-actions";
 import { STAGES, billingLabel } from "../../labels";
 
 export const metadata: Metadata = { title: "Member details", robots: { index: false, follow: false } };
@@ -140,13 +141,19 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
 
           <div className="detail-card">
             <h2>Emails sent to her</h2>
+            {isAdmin && (
+              <form action={newDraftAction} className="mail-toolbar">
+                <input type="hidden" name="to" value={m.id} />
+                <button className="button small outline"><span>Write an email to her</span></button>
+              </form>
+            )}
             {m.emails.length === 0 ? (
               <p className="muted small">No emails yet.</p>
             ) : (
               <ul className="email-history">
                 {m.emails.map((e) => (
                   <li key={e.id}>
-                    <b>{TEMPLATE_INFO[e.templateId as TemplateId]?.name ?? "Email"}</b>
+                    <b>{TEMPLATE_INFO[e.templateId as TemplateId]?.name ?? e.subject ?? "Email"}</b>
                     <span className="muted small">
                       {e.scheduledAt && e.scheduledAt > e.sentAt ? `Scheduled for ${when(e.scheduledAt)}` : when(e.sentAt)}
                     </span>

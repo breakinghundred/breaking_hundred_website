@@ -14,7 +14,23 @@ function inline(s: string) {
 
 const P = 'style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#251423"';
 
-export function renderHtml(blocks: Block[]) {
+/** A logo in the email header. `src` must be an absolute URL in sent emails. */
+export type LogoRef = { src: string; width: number; alt: string };
+
+function header(logos: LogoRef[]) {
+  if (!logos.length) {
+    return '<p style="margin:0 0 28px;font-size:13px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:#7c354f">Breaking Hundred · The Circle</p>';
+  }
+  const imgs = logos
+    .map(
+      (l) =>
+        `<td style="padding:0 20px 0 0;vertical-align:middle"><img src="${esc(l.src)}" width="${l.width}" alt="${esc(l.alt)}" style="display:block;width:${l.width}px;max-width:100%;height:auto;border:0"></td>`,
+    )
+    .join("");
+  return `<table role="presentation" style="margin:0 0 28px;border-collapse:collapse"><tr>${imgs}</tr></table>`;
+}
+
+export function renderHtml(blocks: Block[], logos: LogoRef[] = []) {
   const body = blocks
     .map((b) => {
       if (typeof b === "string") return `<p ${P}>${inline(b)}</p>`;
@@ -31,7 +47,7 @@ export function renderHtml(blocks: Block[]) {
     .join("\n");
   return `<!doctype html><html><body style="margin:0;background:#f8f4f1;font-family:Helvetica,Arial,sans-serif">
 <div style="max-width:600px;margin:0 auto;padding:32px 24px;background:#fffdfb">
-<p style="margin:0 0 28px;font-size:13px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;color:#7c354f">Breaking Hundred · The Circle</p>
+${header(logos)}
 ${body}
 </div></body></html>`;
 }

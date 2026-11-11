@@ -20,7 +20,7 @@ export default async function EditEmailPage({ params }: { params: Promise<{ id: 
   return (
     <section className="section flow-page admin">
       <div className="wrap">
-        <p className="small"><Link href="/admin/emails">← All email templates</Link></p>
+        <p className="small"><Link href="/admin/emails">← Automated emails</Link></p>
         <span className="eyebrow" style={{ color: "var(--wine)" }}>{id} · {info.trigger}</span>
         <h1 className="flow-title">{info.name}</h1>
         <p className="muted small">

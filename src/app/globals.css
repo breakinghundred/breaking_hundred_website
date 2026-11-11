@@ -1153,10 +1153,33 @@ details.mini form { margin-top: 8px; }
 .dot.ok { background: #2f9a55; }
 .dot.bad { background: #c0392b; }
 
-/* phones: members table becomes stacked cards */
 @media (max-width: 860px) {
   .dash-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* members: a table on wide screens, a list of cards below 900px */
+.member-cards { display: none; list-style: none; margin: 0; padding: 0; }
+.member-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 12px; }
+.member-card + .member-card { margin-top: 10px; }
+.member-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.member-card-head .member-name { min-width: 0; overflow-wrap: anywhere; }
+.member-card-head .badge { flex: none; }
+.member-card-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); }
+.member-card-facts dt { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.member-card-facts dd { margin: 2px 0 0; font-size: 0.9rem; }
+.member-card-facts .progress { width: 100%; max-width: 140px; }
+.member-card .link-btn { text-align: left; padding-left: 0; }
+.member-card-notes { padding-top: 12px; border-top: 1px solid var(--line); }
+.member-card-more { justify-self: start; color: var(--wine); font-weight: 700; padding: 4px 0; }
+@media (max-width: 900px) {
+  .members-table { display: none; }
+  .member-cards { display: block; }
+}
+@media (max-width: 380px) {
+  .member-card-facts { grid-template-columns: 1fr; }
+}
+
+/* phones: the smaller admin tables (team, emails) stack into blocks */
 @media (max-width: 700px) {
   .admin-table-wrap { border: 0; background: none; }
   .admin-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -1195,3 +1218,70 @@ details.mini form { margin-top: 8px; }
 .confirm-dialog .button.danger { background: #a3243b; }
 @media (max-width: 480px) { .confirm-actions .button { flex: 1 1 100%; } .confirm-actions { flex-direction: column-reverse; } }
 @media (prefers-reduced-motion: reduce) { .confirm-dialog[open] { animation: none; } }
+
+/* ---------- admin emails: section menu, drafts, contacts, logos ---------- */
+.mail-nav { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 18px; border-bottom: 1px solid var(--line); }
+.mail-nav a { padding: 10px 14px; font-weight: 700; font-size: 0.92rem; color: var(--muted); text-decoration: none; border-bottom: 3px solid transparent; margin-bottom: -1px; }
+.mail-nav a:hover { color: var(--wine); }
+.mail-nav a[aria-current="page"] { color: var(--wine); border-bottom-color: var(--wine); }
+.mail-intro { max-width: 720px; margin: 0 0 20px; }
+.mail-toolbar { margin: 0 0 20px; }
+
+.draft-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.draft-row { display: grid; gap: 4px; padding: 16px 18px; background: #fff; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); text-decoration: none; }
+.draft-row:hover { border-color: var(--wine); }
+.draft-subject { font-weight: 700; font-size: 1.02rem; }
+
+.mail-box { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 14px 16px 16px; margin: 0; display: grid; gap: 12px; min-width: 0; }
+.mail-box legend { font-weight: 700; padding: 0 6px; }
+.contact-matches { list-style: none; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: #fff; display: grid; max-height: 260px; overflow: auto; }
+.contact-matches li.small { padding: 8px 10px; }
+.contact-matches button { width: 100%; text-align: left; background: none; border: 0; padding: 9px 10px; border-radius: 6px; font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.contact-matches button:hover, .contact-matches button:focus-visible { background: var(--cream); }
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--cream); border: 1px solid var(--line); border-radius: 999px; padding: 3px 4px 3px 12px; font-size: 0.86rem; }
+.chip button { border: 0; background: none; width: 26px; height: 26px; border-radius: 50%; font-size: 1.1rem; line-height: 1; cursor: pointer; color: var(--muted); }
+.chip button:hover { background: #eadfe5; color: var(--ink); }
+.logo-picks { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.logo-picks label { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.logo-picks label:has(input:checked) { border-color: var(--wine); background: #fbf6f8; }
+.logo-picks input { width: 18px; height: 18px; accent-color: var(--wine); }
+.logo-picks img { max-width: 90px; max-height: 36px; object-fit: contain; }
+
+.contact-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.contact-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 12px 24px; align-items: center; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+.contact-who { min-width: 0; overflow-wrap: anywhere; }
+.contact-who .badge { margin-left: 8px; vertical-align: 1px; }
+.contact-send { display: grid; gap: 6px; }
+.contact-send form { margin: 0; }
+.contact-send-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.contact-send-form select { flex: 1; min-width: 0; }
+.contact-send-form .admin-msg { flex-basis: 100%; }
+@media (max-width: 760px) {
+  .contact-card { grid-template-columns: 1fr; }
+}
+
+.check { display: flex; gap: 10px; align-items: center; font-weight: 500; font-size: 0.92rem; }
+.check input { width: 18px; height: 18px; accent-color: var(--wine); }
+.detail-card + .detail-card { margin-top: 16px; }
+.logo-header-preview { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; padding: 20px; background: #fffdfb; border: 1px dashed var(--line); border-radius: 8px; margin-bottom: 10px; }
+.logo-header-preview img { max-width: 100%; height: auto; }
+.logo-wordmark { margin: 0; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 800; color: #7c354f; }
+.logo-upload { display: grid; gap: 14px; max-width: 460px; }
+.logo-upload .button { justify-self: start; }
+.logo-list { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
+.logo-card { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px 24px; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+.logo-thumb { display: flex; align-items: center; justify-content: center; min-height: 90px; background: #fffdfb; border: 1px dashed var(--line); border-radius: 8px; padding: 12px; grid-row: span 2; }
+.logo-thumb img { max-width: 100%; height: auto; }
+.logo-edit { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.logo-edit .email-field { flex: 1 1 160px; }
+.logo-edit .email-field:has(input[type="number"]) { flex: 0 1 110px; }
+.logo-edit .check { min-height: 44px; }
+.logo-edit .admin-msg { flex-basis: 100%; }
+.logo-tools { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.logo-tools form.inline { margin: 0; }
+@media (max-width: 640px) {
+  .logo-card { grid-template-columns: 1fr; }
+  .logo-thumb { grid-row: auto; }
+}
+.logo-tools .link-btn[disabled] { opacity: 0.4; cursor: default; text-decoration: none; }

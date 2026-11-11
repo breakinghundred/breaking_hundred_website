@@ -32,6 +32,9 @@ export const TEMPLATE_INFO: Record<TemplateId, { name: string; trigger: string; 
   C21: { name: "Membership has ended", trigger: "The team ends her membership in /admin" },
 };
 
+/** Automated emails that can be sent to one person by hand from Contacts. C11 and C16 need details only the automation has. */
+export const SENDABLE_TEMPLATE_IDS = TEMPLATE_IDS.filter((id) => !TEMPLATE_INFO[id].extra);
+
 /** Merge fields available in every email, with what they contain. */
 export const MERGE_FIELDS: Record<string, string> = {
   first_name: "Member's first name",
@@ -118,11 +121,20 @@ export function defaultSource(id: TemplateId): Source {
 
 /** Problems that would make an email go out wrong. Empty array = safe to save. */
 export function validate(id: TemplateId, source: Source): string[] {
+  return check(source, allowedFields(id));
+}
+
+/** The same checks for an email written by the team (general merge fields only). */
+export function validateCustom(source: Source): string[] {
+  return check(source, Object.keys(MERGE_FIELDS));
+}
+
+function check(source: Source, fields: string[]): string[] {
   const errors: string[] = [];
   if (!source.subject.trim()) errors.push("The subject is empty.");
   if (!source.body.trim()) errors.push("The email body is empty.");
   if (source.subject.length > 200) errors.push("The subject is longer than 200 characters.");
-  const allowed = new Set(allowedFields(id));
+  const allowed = new Set(fields);
   const unknown = fieldsIn(`${source.subject}\n${source.body}`).filter((f) => !allowed.has(f));
   if (unknown.length) errors.push(`Unknown merge field${unknown.length > 1 ? "s" : ""}: ${unknown.map((f) => `{{${f}}}`).join(", ")}. Check the spelling against the list.`);
   const braces = `${source.subject}${source.body}`.replace(/\{\{\s*[a-z0-9_]+\s*\}\}/gi, "");

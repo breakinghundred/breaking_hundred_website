@@ -5,8 +5,9 @@ import { Prisma } from "@/generated/prisma/client";
 import { db } from "../db";
 import { optionalEnv } from "../env";
 import { getSettings } from "../settings";
-import { renderHtml, renderText } from "./render";
-import { compile } from "./source";
+import { automatedLogos, logosById } from "./logos";
+import { renderHtml, renderText, type LogoRef } from "./render";
+import { compile, type Source } from "./source";
 import { getSource } from "./store";
 import type { TemplateId, Vars, Block } from "./templates";
 import { memberVars } from "./vars";
@@ -21,10 +22,10 @@ function resend() {
 const FROM = () => optionalEnv("EMAIL_FROM") ?? "Breaking Hundred <circle@breakinghundred.org>";
 const REPLY_TO = () => optionalEnv("EMAIL_REPLY_TO") ?? "admin@breakinghundred.org";
 
-type Raw = { to: string; subject: string; blocks: Block[]; scheduledAt?: Date; idempotencyKey?: string };
+type Raw = { to: string; subject: string; blocks: Block[]; logos?: LogoRef[]; scheduledAt?: Date; idempotencyKey?: string };
 
 /** Low-level send. Without RESEND_API_KEY in development, prints the email instead. */
-async function deliver({ to, subject, blocks, scheduledAt, idempotencyKey }: Raw): Promise<string | null> {
+async function deliver({ to, subject, blocks, logos = [], scheduledAt, idempotencyKey }: Raw): Promise<string | null> {
   const r = resend();
   if (!r) {
     if (process.env.NODE_ENV === "production") throw new Error("RESEND_API_KEY is not set");
@@ -37,7 +38,7 @@ async function deliver({ to, subject, blocks, scheduledAt, idempotencyKey }: Raw
       to,
       replyTo: REPLY_TO(),
       subject,
-      html: renderHtml(blocks),
+      html: renderHtml(blocks, logos),
       text: renderText(blocks),
       ...(scheduledAt && scheduledAt.getTime() > Date.now() + 30_000 ? { scheduledAt: scheduledAt.toISOString() } : {}),
     },
@@ -77,10 +78,11 @@ export async function sendMemberEmail(
       to: member.email,
       subject,
       blocks,
+      logos: await automatedLogos(),
       scheduledAt: opts.scheduledAt,
       idempotencyKey: `${member.id}:${templateId}:${sendKey}`.slice(0, 256),
     });
-    await db().emailLog.update({ where: { id: logId }, data: { resendId } });
+    await db().emailLog.update({ where: { id: logId }, data: { resendId, subject } });
     return true;
   } catch (e) {
     // Release the claim so a retry can send it.
@@ -90,8 +92,8 @@ export async function sendMemberEmail(
 }
 
 /** Test send of a template from /admin, with sample values. Not logged. */
-export async function sendPreview(to: string, subject: string, blocks: Block[]) {
-  await deliver({ to, subject: `[Test] ${subject}`, blocks });
+export async function sendPreview(to: string, subject: string, blocks: Block[], logos?: LogoRef[]) {
+  await deliver({ to, subject: `[Test] ${subject}`, blocks, logos: logos ?? (await automatedLogos()) });
 }
 
 /**
@@ -101,8 +103,9 @@ export async function sendPreview(to: string, subject: string, blocks: Block[]) 
  */
 export async function sendPreviews(to: string, emails: { subject: string; blocks: Block[] }[]): Promise<boolean> {
   const r = resend();
+  const logos = await automatedLogos();
   if (!r) {
-    for (const e of emails) await deliver({ to, subject: `[Test] ${e.subject}`, blocks: e.blocks });
+    for (const e of emails) await deliver({ to, subject: `[Test] ${e.subject}`, blocks: e.blocks, logos });
     return false;
   }
   for (let i = 0; i < emails.length; i += 100) {
@@ -112,13 +115,85 @@ export async function sendPreviews(to: string, emails: { subject: string; blocks
         to,
         replyTo: REPLY_TO(),
         subject: `[Test] ${e.subject}`,
-        html: renderHtml(e.blocks),
+        html: renderHtml(e.blocks, logos),
         text: renderText(e.blocks),
       })),
     );
     if (error) throw new Error(`Resend: ${error.message}`);
   }
   return true;
+}
+
+/** EmailLog.templateId for emails written by the team. */
+export const CUSTOM_EMAIL = "custom";
+
+/**
+ * Send a team-written email to each member, filled with her own details.
+ * Each send is logged against the member (templateId "custom"). Sent in Resend
+ * batches of 100, so a large group doesn't hit the rate limit.
+ */
+export async function sendCustomEmail(
+  members: Member[],
+  source: Source,
+  opts: { logoIds: string[]; sendKey: string },
+): Promise<{ sent: number; skipped: number }> {
+  if (!members.length) return { sent: 0, skipped: 0 };
+  const [settings, logos] = await Promise.all([getSettings(), logosById(opts.logoIds)]);
+  const r = resend();
+  if (!r && process.env.NODE_ENV === "production") throw new Error("RESEND_API_KEY is not set");
+  let sent = 0;
+  let skipped = 0;
+
+  for (let i = 0; i < members.length; i += 100) {
+    const chunk = members.slice(i, i + 100);
+    // Claim a log row per member first, so a repeated press never sends twice.
+    const claimed: { member: Member; logId: string; subject: string; blocks: Block[] }[] = [];
+    for (const member of chunk) {
+      const { subject, blocks } = compile(source, memberVars(member, settings));
+      try {
+        const row = await db().emailLog.create({
+          data: { memberId: member.id, templateId: CUSTOM_EMAIL, sendKey: opts.sendKey, toEmail: member.email, subject },
+        });
+        claimed.push({ member, logId: row.id, subject, blocks });
+      } catch (e) {
+        if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+          skipped++;
+          continue;
+        }
+        throw e;
+      }
+    }
+    if (!claimed.length) continue;
+
+    try {
+      if (!r) {
+        for (const c of claimed) await deliver({ to: c.member.email, subject: c.subject, blocks: c.blocks, logos });
+      } else {
+        const { data, error } = await r.batch.send(
+          claimed.map((c) => ({
+            from: FROM(),
+            to: c.member.email,
+            replyTo: REPLY_TO(),
+            subject: c.subject,
+            html: renderHtml(c.blocks, logos),
+            text: renderText(c.blocks),
+          })),
+          { idempotencyKey: `${opts.sendKey}:${i}`.slice(0, 256) },
+        );
+        if (error) throw new Error(`Resend: ${error.message}`);
+        await Promise.all(
+          claimed.map((c, n) => (data?.data[n]?.id ? db().emailLog.update({ where: { id: c.logId }, data: { resendId: data.data[n].id } }) : null)),
+        );
+      }
+      sent += claimed.length;
+    } catch (e) {
+      // Release the claims so the send can be tried again.
+      await db().emailLog.deleteMany({ where: { id: { in: claimed.map((c) => c.logId) } } }).catch(() => {});
+      if (sent) throw new Error(`${sent} sent, then it stopped: ${e instanceof Error ? e.message : String(e)}`);
+      throw e;
+    }
+  }
+  return { sent, skipped };
 }
 
 /** Who test and team emails come from, for showing in /admin. */
