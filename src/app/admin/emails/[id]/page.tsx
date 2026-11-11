@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/staff";
 import { TEMPLATE_IDS, TEMPLATE_INFO } from "@/lib/email/catalogue";
+import { listLogos, logoPath } from "@/lib/email/logos";
 import { getSource } from "@/lib/email/store";
 import type { TemplateId } from "@/lib/email/templates";
 import { Editor } from "./Editor";
@@ -15,6 +16,10 @@ export default async function EditEmailPage({ params }: { params: Promise<{ id: 
   const id = raw.toUpperCase() as TemplateId;
   if (!TEMPLATE_IDS.includes(id)) notFound();
   const source = await getSource(id);
+  // The same logos the automated emails carry. If they can't be loaded, show none (sending does the same).
+  const logos = (await listLogos().catch(() => []))
+    .filter((l) => l.inAutomated)
+    .map((l) => ({ src: logoPath(l.id), width: l.width, alt: l.name }));
   const info = TEMPLATE_INFO[id];
 
   return (
@@ -26,7 +31,7 @@ export default async function EditEmailPage({ params }: { params: Promise<{ id: 
         <p className="muted small">
           {source.edited ? `Edited wording, last saved ${source.updatedAt!.toLocaleString("en-GB")}.` : "Original wording."}
         </p>
-        <Editor id={id} subject={source.subject} body={source.body} edited={source.edited} />
+        <Editor id={id} subject={source.subject} body={source.body} edited={source.edited} logos={logos} />
       </div>
     </section>
   );

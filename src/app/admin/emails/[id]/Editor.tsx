@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useMemo, useRef, useState } from "react";
 import {
   EXTRA_FIELD_INFO,
@@ -9,13 +10,25 @@ import {
   defaultSource,
   validate,
 } from "@/lib/email/catalogue";
-import { renderHtml } from "@/lib/email/render";
+import { renderHtml, type LogoRef } from "@/lib/email/render";
 import { compile } from "@/lib/email/source";
 import type { TemplateId } from "@/lib/email/templates";
 import { useConfirmSubmit } from "../../ConfirmDialog";
 import { editorAction, type EditorState } from "./actions";
 
-export function Editor({ id, subject: savedSubject, body: savedBody, edited }: { id: TemplateId; subject: string; body: string; edited: boolean }) {
+export function Editor({
+  id,
+  subject: savedSubject,
+  body: savedBody,
+  edited,
+  logos,
+}: {
+  id: TemplateId;
+  subject: string;
+  body: string;
+  edited: boolean;
+  logos: LogoRef[];
+}) {
   const [state, action, pending] = useActionState<EditorState, FormData>(editorAction, {});
   const [subject, setSubject] = useState(savedSubject);
   const [body, setBody] = useState(savedBody);
@@ -28,8 +41,8 @@ export function Editor({ id, subject: savedSubject, body: savedBody, edited }: {
   const problems = validate(id, { subject, body });
   const preview = useMemo(() => {
     const compiled = compile({ subject, body }, SAMPLE_VARS);
-    return { subject: compiled.subject, html: renderHtml(compiled.blocks) };
-  }, [subject, body]);
+    return { subject: compiled.subject, html: renderHtml(compiled.blocks, logos) };
+  }, [subject, body, logos]);
   const dirty = subject !== saved.subject || body !== saved.body;
 
   const fields = { ...MERGE_FIELDS, ...Object.fromEntries((TEMPLATE_INFO[id].extra ?? []).map((f) => [f, EXTRA_FIELD_INFO[f]])) };
@@ -148,6 +161,12 @@ export function Editor({ id, subject: savedSubject, body: savedBody, edited }: {
       <aside className="email-side">
         <h3 className="email-side-h">Preview</h3>
         <p className="small muted">With example details. Subject: <b>{preview.subject}</b></p>
+        <p className="small muted">
+          {logos.length
+            ? `Logos at the top: ${logos.map((l) => l.alt).join(", ")}.`
+            : "No logos are switched on, so the email starts with the Breaking Hundred name."}{" "}
+          <Link href="/admin/emails/logos">Change logos</Link>
+        </p>
         <iframe title="Email preview" className="email-preview" srcDoc={preview.html} sandbox="" />
 
         <h3 className="email-side-h">Merge fields</h3>
