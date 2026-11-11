@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { submitInterest, type InterestState } from "@/app/interest/actions";
+import { COUNTRIES } from "@/lib/countries";
 import { site } from "@/lib/site";
 import { EASE } from "./motion";
 
@@ -13,6 +14,7 @@ import { EASE } from "./motion";
  */
 export function JoinForm({ startOpen = false }: { startOpen?: boolean }) {
   const [state, action, pending] = useActionState<InterestState, FormData>(submitInterest, {});
+  const v = state.values ?? {};
   const [open, setOpen] = useState(startOpen);
   const panelId = useId();
   const firstField = useRef<HTMLInputElement>(null);
@@ -75,17 +77,43 @@ export function JoinForm({ startOpen = false }: { startOpen?: boolean }) {
       <div id={panelId} className="reveal-panel" inert={!open}>
         <div className="reveal-clip">
           <form action={submit} className="join-form">
-            <label>
-              First name
-              <input ref={firstField} name="firstName" autoComplete="given-name" required maxLength={100} />
+            <label className="wide">
+              Full name
+              <input
+                ref={firstField}
+                name="fullName"
+                autoComplete="name"
+                required
+                minLength={2}
+                maxLength={200}
+                defaultValue={v.fullName}
+              />
             </label>
             <label>
-              Last name
-              <input name="lastName" autoComplete="family-name" required maxLength={100} />
+              Email
+              <input name="email" type="email" autoComplete="email" required maxLength={254} defaultValue={v.email} />
+            </label>
+            <label>
+              Phone
+              <input
+                name="phone"
+                type="tel"
+                autoComplete="tel"
+                inputMode="tel"
+                required
+                maxLength={30}
+                placeholder="+44 7700 900123"
+                defaultValue={v.phone}
+              />
             </label>
             <label className="wide">
-              Email
-              <input name="email" type="email" autoComplete="email" required maxLength={254} />
+              Country of residence
+              <select name="country" autoComplete="country" required defaultValue={v.country ?? ""}>
+                <option value="" disabled>Choose your country</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code}>{c.name}</option>
+                ))}
+              </select>
             </label>
             <label className="wide check">
               <input name="consent" type="checkbox" required />

@@ -4,6 +4,7 @@ import type { MemberStatus } from "@/generated/prisma/client";
 import { requireAdmin } from "@/lib/admin-auth";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/dates";
+import { countryName } from "@/lib/countries";
 import { mightyConfigured } from "@/lib/mighty";
 import { SETTING_FIELDS, getSettings } from "@/lib/settings";
 import { ActionForm } from "./ActionForm";
@@ -42,7 +43,16 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       where: {
         ...(filterStatus ? { status: filterStatus } : {}),
         ...(flag ? { followUpFlag: true } : {}),
-        ...(q ? { OR: [{ email: { contains: q.toLowerCase() } }, { lastName: { contains: q, mode: "insensitive" } }] } : {}),
+        ...(q
+          ? {
+              OR: [
+                { email: { contains: q.toLowerCase() } },
+                { firstName: { contains: q, mode: "insensitive" } },
+                { lastName: { contains: q, mode: "insensitive" } },
+                { phone: { contains: q } },
+              ],
+            }
+          : {}),
       },
       orderBy: { updatedAt: "desc" },
       take: 300,
@@ -121,14 +131,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <h2 className="admin-h">Members ({members.length})</h2>
         <form className="admin-search">
           {filterStatus && <input type="hidden" name="status" value={filterStatus} />}
-          <input name="q" placeholder="Search email or last name" defaultValue={q} />
+          <input name="q" placeholder="Search name, email or phone" defaultValue={q} />
           <button className="link-btn" type="submit">Search</button>
         </form>
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Name / email</th>
+                <th>Member</th>
                 <th>Status</th>
                 <th>Paid</th>
                 <th>Renews</th>
@@ -145,6 +155,12 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     {m.firstName} {m.lastName}
                     <br />
                     <span className="muted small">{m.email}{m.mnEmail ? ` · MN: ${m.mnEmail}` : ""}</span>
+                    {(m.phone || m.country) && (
+                      <>
+                        <br />
+                        <span className="muted small">{[m.phone, countryName(m.country)].filter(Boolean).join(" · ")}</span>
+                      </>
+                    )}
                   </td>
                   <td><code>{m.status}</code></td>
                   <td>{m.paidAt ? formatDate(m.paidAt) : ""}<br /><span className="muted small">{m.paymentReference}</span></td>

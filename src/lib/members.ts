@@ -19,22 +19,33 @@ export const throttle = () => sleep(550);
 
 /* ---------- Stage 1: interest ---------- */
 
-export async function registerInterest(input: { firstName: string; lastName: string; email: string; consent: boolean }) {
+/** "Mary Ann Okafor" → first "Mary", last "Ann Okafor". Emails greet her by first name. */
+export function splitName(fullName: string) {
+  const [firstName = "", ...rest] = fullName.trim().replace(/\s+/g, " ").split(" ");
+  return { firstName, lastName: rest.join(" ") };
+}
+
+export async function registerInterest(input: {
+  firstName: string;
+  lastName: string;
+  email: string;
+  consent: boolean;
+  phone?: string;
+  country?: string;
+}) {
   const email = normaliseEmail(input.email);
+  const details = {
+    firstName: input.firstName.trim(),
+    lastName: input.lastName.trim(),
+    emailConsent: input.consent,
+    ...(input.phone ? { phone: input.phone.trim() } : {}),
+    ...(input.country ? { country: input.country } : {}),
+  };
   const member = await db().member.upsert({
     where: { email },
-    create: {
-      email,
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
-      emailConsent: input.consent,
-    },
+    create: { email, ...details },
     // A repeat submission updates the record; it never moves her status back.
-    update: {
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
-      emailConsent: input.consent,
-    },
+    update: details,
   });
   await sendMemberEmail(member, "C01");
   return member;
