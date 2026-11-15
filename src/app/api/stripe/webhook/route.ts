@@ -87,7 +87,7 @@ async function onCheckoutPaid(session: Stripe.Checkout.Session) {
     data: {
       status: "paid",
       subscriptionStatus: "active",
-      priceTier: "standard_299",
+      priceTier: `standard_${Math.round((session.amount_total ?? 0) / 100)}`,
       amount: session.amount_total ?? null,
       currency: session.currency ?? "gbp",
       paymentReference: invoice?.number ?? invoiceId ?? session.id,

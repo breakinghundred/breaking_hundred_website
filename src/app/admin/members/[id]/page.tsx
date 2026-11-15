@@ -9,6 +9,7 @@ import { formatDate, formatMoney } from "@/lib/dates";
 import { TEMPLATE_INFO } from "@/lib/email/catalogue";
 import type { TemplateId } from "@/lib/email/templates";
 import { paymentChangesFor } from "@/lib/members";
+import { getMembershipPrice } from "@/lib/settings";
 import { ActionForm } from "../../ActionForm";
 import { PaymentStatusForm } from "../../PaymentStatusForm";
 import { memberAction } from "../../actions";
@@ -43,7 +44,10 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
   const staff = await requireStaff();
   const isAdmin = staff.role === "admin";
   const { id } = await params;
-  const m = await db().member.findUnique({ where: { id }, include: { emails: { orderBy: { sentAt: "desc" } } } });
+  const [m, price] = await Promise.all([
+    db().member.findUnique({ where: { id }, include: { emails: { orderBy: { sentAt: "desc" } } } }),
+    getMembershipPrice(),
+  ]);
   if (!m) notFound();
 
   const stage = STAGES[m.status];
@@ -118,7 +122,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
             {isAdmin && (
               <details className="mini">
                 <summary>Change payment status</summary>
-                <PaymentStatusForm id={m.id} name={name || m.email} options={paymentChangesFor(m.status)} />
+                <PaymentStatusForm id={m.id} name={name || m.email} options={paymentChangesFor(m.status)} defaultAmount={price.pounds} />
               </details>
             )}
           </div>

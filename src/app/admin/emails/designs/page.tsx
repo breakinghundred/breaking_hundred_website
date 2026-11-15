@@ -25,7 +25,6 @@ export default async function DesignsPage({ searchParams }: { searchParams: Prom
   const [choices, source, logos] = await Promise.all([designChoices(), getSource(sample), listLogos().catch(() => [])]);
   const refs = logos.filter((l) => l.inAutomated).map((l) => ({ src: logoPath(l.id), width: l.width, alt: l.name }));
   const { subject, blocks } = compile(source, SAMPLE_VARS);
-  const own = Object.entries(choices.templates) as [TemplateId, keyof typeof DESIGNS][];
 
   return (
     <section className="section flow-page admin">
@@ -87,29 +86,6 @@ export default async function DesignsPage({ searchParams }: { searchParams: Prom
           })}
         </ul>
 
-        <div className="detail-card">
-          <h2>Automated emails with their own design</h2>
-          {own.length === 0 ? (
-            <p className="small muted">
-              None. Every automated email uses the house design. To give one email a different look, open it from{" "}
-              <Link href="/admin/emails">Automated emails</Link> and choose a design next to the preview.
-            </p>
-          ) : (
-            <ul className="design-own-list">
-              {own.map(([tid, did]) => (
-                <li key={tid}>
-                  <Link href={`/admin/emails/${tid}`}>{TEMPLATE_INFO[tid].name}</Link>
-                  <span className="badge plum">{DESIGNS[did].name}</span>
-                  <ActionForm action={designAction} className="inline">
-                    <input type="hidden" name="template" value={tid} />
-                    <input type="hidden" name="design" value="" />
-                    <button className="link-btn" type="submit">Use the house design</button>
-                  </ActionForm>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
       </div>
     </section>
   );

@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "./db";
+import { DEFAULT_PRICE_POUNDS, formatPounds, parsePounds } from "./price-format";
 
 /**
  * Merge links and onboarding call details the team edits in /admin.
@@ -17,6 +18,7 @@ export const SETTING_FIELDS = [
   { key: "onboarding_call_link", label: "Joining link" },
   { key: "calendar_link", label: "Add-to-calendar link" },
   { key: "recording_link", label: "Recording link" },
+  { key: "membership_price", label: "Price for 12 months (£)", type: "price" },
 ] as const;
 
 export type SettingKey = (typeof SETTING_FIELDS)[number]["key"];
@@ -25,6 +27,7 @@ export type Settings = Record<SettingKey, string>;
 const DEFAULTS: Partial<Settings> = {
   ios_app_link: "https://apps.apple.com/app/mighty-networks/id1081683081",
   android_app_link: "https://play.google.com/store/apps/details?id=com.mightybell.mb",
+  membership_price: String(DEFAULT_PRICE_POUNDS),
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -43,6 +46,27 @@ export async function saveSettings(values: Partial<Settings>) {
       db().setting.upsert({ where: { key }, create: { key, value: value ?? "" }, update: { value: value ?? "" } }),
     ),
   );
+}
+
+export type MembershipPrice = { pounds: number; pence: number; label: string };
+
+/** The membership price from the settings, e.g. { pounds: 299, pence: 29900, label: "£299" }. */
+export function priceFrom(settings: Pick<Settings, "membership_price">): MembershipPrice {
+  const pounds = parsePounds(settings.membership_price) ?? DEFAULT_PRICE_POUNDS;
+  return { pounds, pence: Math.round(pounds * 100), label: formatPounds(pounds) };
+}
+
+/**
+ * The price everyone is quoted and new members are charged. Never throws:
+ * if the database can't be read, pages still show the built-in price.
+ */
+export async function getMembershipPrice(): Promise<MembershipPrice> {
+  try {
+    return priceFrom(await getSettings());
+  } catch (e) {
+    console.error("Could not read the membership price", e);
+    return priceFrom({ membership_price: process.env.MEMBERSHIP_PRICE ?? "" });
+  }
 }
 
 /** The onboarding call as a Date, read as UK local time from the admin input. */

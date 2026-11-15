@@ -23,7 +23,6 @@ export default async function LogosPage() {
         />
 
         <div className="detail-card">
-          <h2>How the automated emails start</h2>
           <div className="logo-header-preview">
             {automated.length === 0 ? (
               <p className="logo-wordmark">Breaking Hundred · The Circle</p>

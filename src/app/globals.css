@@ -1008,16 +1008,19 @@ form.inline .admin-msg { margin-top: 0; }
 .email-problems { margin: 0; padding-left: 20px; }
 .email-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
 .email-actions .button[disabled] { opacity: 0.55; cursor: not-allowed; }
-.email-test { display: inline-flex; gap: 8px; align-items: center; }
-.email-test .admin-input { width: 220px; padding: 14px 10px; }
+.email-test { display: inline-flex; flex-wrap: wrap; gap: 8px; align-items: center; max-width: 100%; }
+.email-test .admin-input { width: 220px; max-width: 100%; flex: 1 1 180px; padding: 14px 10px; }
 .email-side { position: sticky; top: 100px; }
 .email-side-h { font-size: 1.1rem; margin: 0 0 6px; }
 .email-preview { width: 100%; height: 520px; border: 1px solid var(--line); background: #f8f4f1; margin-bottom: 28px; }
 .email-fields { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; max-height: 360px; overflow: auto; font-size: 0.85rem; }
 @media (max-width: 960px) {
-  .email-editor { grid-template-columns: 1fr; }
+  .email-editor { grid-template-columns: minmax(0, 1fr); }
   .email-side { position: static; }
 }
+
+/* Fieldsets default to min-width: min-content, which stops them shrinking on phones. */
+fieldset { min-width: 0; }
 
 /* admin sign in */
 .login-wrap { max-width: 520px; }
@@ -1039,7 +1042,12 @@ form.inline .admin-msg { margin-top: 0; }
 .dash-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px 32px; }
 .dash-head .flow-title { margin-bottom: 8px; }
 .dash-head p { margin: 0; }
-.dash-links { display: flex; align-items: center; gap: 20px; }
+.dash-links { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+@media (max-width: 640px) {
+  .dash-links { width: 100%; }
+  /* "Signed in as…" and Sign out share their own line under the buttons. */
+  .dash-links > .muted { flex: 1 1 auto; }
+}
 
 .dash-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 32px; }
 .tile {
@@ -1343,9 +1351,6 @@ details.mini form { margin-top: 8px; }
 .design-card-note { color: #1f6b3a; font-weight: 600; }
 .design-card-action { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .design-card-action .admin-msg { margin-top: 0; }
-.design-own-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.design-own-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-.design-own-list form.inline { margin: 0; }
 .design-picker .design-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; margin-bottom: 10px; }
 .design-option {
   position: relative; display: grid; gap: 6px; justify-items: center; padding: 10px 8px; border: 2px solid var(--line);
@@ -1381,3 +1386,18 @@ details.mini form { margin-top: 8px; }
 .notes-block form.inline { margin: 0; }
 .notes-block form.inline .admin-input { width: auto; flex: 0 1 320px; min-width: 0; }
 @media (max-width: 480px) { .notes-flag { grid-template-columns: 1fr; } }
+
+/* Settings: add people from a file */
+.import-form { display: grid; gap: 12px; margin-top: 12px; }
+.import-drop {
+  position: relative; display: grid; gap: 4px; justify-items: center; text-align: center;
+  padding: 24px 16px; border: 1.5px dashed #c9b2bd; border-radius: 10px; background: #fdfafb; cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.import-drop:hover, .import-drop:has(input:focus-visible) { border-color: var(--wine); background: #fbf5f8; }
+.import-drop:has(input:focus-visible) { outline: 2px solid var(--wine); outline-offset: 2px; }
+.import-drop.has-file { border-style: solid; border-color: var(--wine); }
+.import-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.import-drop-title { font-weight: 700; overflow-wrap: anywhere; }
+.import-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+@media (prefers-reduced-motion: reduce) { .import-drop { transition: none; } }

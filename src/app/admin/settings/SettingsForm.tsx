@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { formatPounds, parsePounds } from "@/lib/price-format";
 import { saveSettingsAction, type AdminState } from "../actions";
 
 export type FieldView = {
@@ -10,7 +11,7 @@ export type FieldView = {
   placeholder?: string;
   /** Shown instead of "Not filled in" when leaving it empty is fine. */
   emptyNote?: string;
-  type: "url" | "datetime-local";
+  type: "url" | "datetime-local" | "price";
   value: string;
   usedIn: string[];
 };
@@ -53,6 +54,8 @@ export function SettingsForm({ groups }: { groups: FieldGroup[] }) {
             const v = values[f.key] ?? "";
             const empty = !v.trim();
             const isUrl = f.type === "url";
+            const isPrice = f.type === "price";
+            const isDate = f.type === "datetime-local";
             const openable = isUrl && /^https?:\/\/\S+\.\S+$/i.test(v.trim());
             return (
               <div key={f.key} className={`settings-field${changed.includes(f.key) ? " is-changed" : ""}`}>
@@ -65,8 +68,8 @@ export function SettingsForm({ groups }: { groups: FieldGroup[] }) {
                   <input
                     id={`s-${f.key}`}
                     name={f.key}
-                    type={f.type}
-                    inputMode={isUrl ? "url" : undefined}
+                    type={isPrice ? "text" : f.type}
+                    inputMode={isUrl ? "url" : isPrice ? "decimal" : undefined}
                     value={v}
                     placeholder={f.placeholder}
                     onChange={(e) => setValues((s) => ({ ...s, [f.key]: e.target.value }))}
@@ -78,13 +81,22 @@ export function SettingsForm({ groups }: { groups: FieldGroup[] }) {
                       Test link ↗
                     </a>
                   )}
-                  {!isUrl && v && (
+                  {isDate && v && (
                     <button type="button" className="link-btn small" onClick={() => setValues((s) => ({ ...s, [f.key]: "" }))}>
                       Clear
                     </button>
                   )}
                 </div>
-                {!isUrl && (
+                {isPrice && (
+                  <p className="settings-preview small">
+                    {parsePounds(v) ? (
+                      <>Members will see: <b>{formatPounds(parsePounds(v)!)} for 12 months</b></>
+                    ) : (
+                      <>Enter the price in pounds, for example 299 or 299.50.</>
+                    )}
+                  </p>
+                )}
+                {isDate && (
                   <p className="settings-preview small">
                     {v ? <>Members will see: <b>{readable(v)}</b></> : <>No date yet. Emails say the date is “to be confirmed shortly”.</>}
                   </p>

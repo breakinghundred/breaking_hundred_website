@@ -2,7 +2,7 @@ import Link from "next/link";
 
 const TABS = [
   { href: "/admin/emails/drafts", key: "drafts", label: "Your emails" },
-  { href: "/admin/emails/contacts", key: "contacts", label: "Contacts" },
+  { href: "/admin/emails/contacts", key: "contacts", label: "Manual mails" },
   { href: "/admin/emails", key: "automated", label: "Automated emails" },
   { href: "/admin/emails/designs", key: "designs", label: "Designs" },
   { href: "/admin/emails/logos", key: "logos", label: "Logos" },

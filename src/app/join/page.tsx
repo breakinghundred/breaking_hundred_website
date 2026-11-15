@@ -3,6 +3,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatDate, renewalDateFor } from "@/lib/dates";
 import { makeToken, readToken } from "@/lib/token";
+import { getMembershipPrice } from "@/lib/settings";
 import { site } from "@/lib/site";
 import { PayForm } from "./PayForm";
 
@@ -48,21 +49,22 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
   }
 
   const renewal = formatDate(member.renewalDate ?? renewalDateFor(new Date()));
+  const price = await getMembershipPrice();
   return (
     <Shell title={`Welcome, ${member.firstName}.`}>
       <p className="muted">Confirm your place in The Circle: one year of the Academy, Library, Community, Monthly Live and Partner Directory.</p>
       <div className="flow-card">
         <dl className="facts">
           <dt>Price</dt>
-          <dd>£299 for your first membership period</dd>
+          <dd>{price.label} for your first membership period</dd>
           <dt>Renews</dt>
-          <dd>Automatically on {renewal}, then every 12 months, at £299</dd>
+          <dd>Automatically on {renewal}, then every 12 months, at {price.label}</dd>
           <dt>Cancel</dt>
           <dd>Any time before a renewal date, online in your billing settings (link in every email). You keep access until then.</dd>
           <dt>Email</dt>
           <dd>{member.email}</dd>
         </dl>
-        <PayForm token={t} renewalDate={renewal} />
+        <PayForm token={t} renewalDate={renewal} price={price.label} />
         <p className="notice">
           Read our <a href={site.privacy} target="_blank" rel="noopener noreferrer">privacy policy</a>. Questions?
           Email <a href={`mailto:${site.email}`}>{site.email}</a>.

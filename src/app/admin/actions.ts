@@ -6,7 +6,9 @@ import { requireAdminAction, requireStaff } from "@/lib/staff";
 import { db } from "@/lib/db";
 import { runDailyJobs } from "@/lib/jobs";
 import { changePaymentStatus, completeSpaces, resendPaymentLink, resendPaymentLinks, grantSpaces, importInterest, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
-import { SETTING_FIELDS, saveSettings, type Settings } from "@/lib/settings";
+import { SETTING_FIELDS, getMembershipPrice, saveSettings, type Settings } from "@/lib/settings";
+import { formatPounds, parsePounds } from "@/lib/price-format";
+import { MAX_IMPORT_BYTES, readPeopleFile, type ImportResult } from "@/lib/import-file";
 
 export type AdminState = { message?: string; error?: string };
 
@@ -79,18 +81,23 @@ export async function runJobsAction(): Promise<AdminState> {
 
 export async function importAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
   return guarded(async () => {
-    const rows = String(formData.get("csv") ?? "")
-      .split(/\r?\n/)
-      .map((line) => line.split(/[,\t;]/).map((c) => c.trim().replace(/^"|"$/g, "")))
-      .filter((cells) => cells.some((c) => c.includes("@")))
-      .map((cells) => {
-        const email = cells.find((c) => c.includes("@"))!;
-        const names = cells.filter((c) => c && c !== email);
-        return { email, firstName: names[0] ?? "", lastName: names[1] ?? "" };
-      });
-    const r = await importInterest(rows);
-    if (!rows.length) throw new Error("No email addresses found. Put one person per line: first name, last name, email.");
-    return `Added ${r.created} new ${r.created === 1 ? "person" : "people"}${r.updated ? `; ${r.updated} were already on the list` : ""}.`;
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) throw new Error("Please choose a CSV or Excel file to upload.");
+    if (file.size > MAX_IMPORT_BYTES) throw new Error("Please upload a smaller file (up to 2 MB), or split it into two.");
+    let result: ImportResult;
+    try {
+      result = await readPeopleFile(file);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "";
+      throw new Error(msg.startsWith("Please") ? msg : "Please check the file: it couldn't be read. Save it as CSV or .xlsx and try again.");
+    }
+    const { people, skipped } = result;
+    if (!people.length) throw new Error("No email addresses found. Please check the file has a column of email addresses.");
+    const r = await importInterest(people);
+    const parts = [`Added ${r.created} new ${r.created === 1 ? "person" : "people"}`];
+    if (r.updated) parts.push(`${r.updated} ${r.updated === 1 ? "was" : "were"} already on the list`);
+    if (skipped) parts.push(`${skipped} ${skipped === 1 ? "row was" : "rows were"} skipped because ${skipped === 1 ? "it had" : "they had"} no valid email address`);
+    return `${parts.join("; ")}.`;
   }, true);
 }
 
@@ -101,7 +108,12 @@ export async function saveSettingsAction(_prev: AdminState, formData: FormData):
     for (const f of SETTING_FIELDS) {
       if (!formData.has(f.key)) continue;
       const value = String(formData.get(f.key) ?? "").trim();
-      if ("type" in f) {
+      if ("type" in f && f.type === "price") {
+        const pounds = parsePounds(value);
+        if (!pounds) throw new Error("Please enter the membership price in pounds, for example 299 or 299.50.");
+        values[f.key] = String(pounds);
+        continue;
+      } else if ("type" in f) {
         if (value && Number.isNaN(new Date(`${value}Z`).getTime())) throw new Error("Please choose the date and time of the call again.");
       } else if (value && !/^https?:\/\/[^\s]+\.[^\s]+$/i.test(value)) {
         throw new Error(`Please check “${f.label}”: it should be a full web address starting with https://`);
@@ -110,6 +122,9 @@ export async function saveSettingsAction(_prev: AdminState, formData: FormData):
     }
     if (!Object.keys(values).length) throw new Error("Something went wrong. Please refresh the page and try again.");
     await saveSettings(values);
+    // The public pages quote the price too.
+    if (values.membership_price) revalidatePath("/", "layout");
+    if (values.membership_price) return `Saved. New payments, the website and emails now use ${formatPounds(Number(values.membership_price))}.`;
     return "Saved. New emails will use these details.";
   }, true);
 }
@@ -176,8 +191,9 @@ export async function paymentStatusAction(_prev: AdminState, formData: FormData)
     let amountPence: number | undefined;
     if (change === "paid") {
       const raw = String(formData.get("amount") ?? "").replace(/[£,\s]/g, "");
-      const pounds = raw ? Number(raw) : 299;
-      if (!Number.isFinite(pounds) || pounds <= 0 || pounds > 10000) throw new Error("Please enter the amount she paid in pounds, for example 299.");
+      const price = await getMembershipPrice();
+      const pounds = raw ? Number(raw) : price.pounds;
+      if (!Number.isFinite(pounds) || pounds <= 0 || pounds > 10000) throw new Error(`Please enter the amount she paid in pounds, for example ${price.pounds}.`);
       amountPence = Math.round(pounds * 100);
     }
     await changePaymentStatus(id, change, { amountPence, reference: String(formData.get("reference") ?? "") });

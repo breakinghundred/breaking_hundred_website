@@ -4,6 +4,7 @@ import { raiseAlert } from "./alerts";
 import { db } from "./db";
 import { DAY, renewalDateFor } from "./dates";
 import { sendMemberEmail } from "./email/send";
+import { getMembershipPrice } from "./settings";
 import {
   addToPrivateSpaces,
   findMemberByEmail,
@@ -180,7 +181,7 @@ export async function changePaymentStatus(
           data: {
             status: "paid",
             paidAt: now,
-            amount: opts.amountPence ?? 29900,
+            amount: opts.amountPence ?? (await getMembershipPrice()).pence,
             currency: "gbp",
             priceTier: "manual",
             paymentReference: reference,

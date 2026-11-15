@@ -10,6 +10,8 @@ import { Photo } from "@/components/Photo";
 import { LazyVideo, type Video } from "@/components/LazyVideo";
 import { scaleIn } from "@/components/motion";
 import { Testimonials } from "@/components/Testimonials";
+import { connection } from "next/server";
+import { getMembershipPrice } from "@/lib/settings";
 import { method } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -60,7 +62,7 @@ const promo: Video = {
 
 const [believe] = method;
 
-const faqs = [
+const faqs = (price: string) => [
   {
     q: "Who is membership for?",
     a: "Women from minority ethnic backgrounds who are building a leadership career — whether you are stepping into your first management role or preparing for an executive or board seat.",
@@ -79,7 +81,7 @@ const faqs = [
   },
   {
     q: "When do I pay?",
-    a: "Register your interest below. Membership opens on 21 November, when we email you a personal link to pay £299 for 12 months. It renews automatically each year and you can cancel online at any time before your renewal date.",
+    a: `Register your interest below. Membership opens on 21 November, when we email you a personal link to pay ${price} for 12 months. It renews automatically each year and you can cancel online at any time before your renewal date.`,
   },
   {
     q: "How do I pay?",
@@ -87,7 +89,10 @@ const faqs = [
   },
 ];
 
-export default function MembershipPage() {
+export default async function MembershipPage() {
+  // The price is edited in /admin/settings, so read it on every request.
+  await connection();
+  const price = await getMembershipPrice();
   return (
     <>
       <PageHero
@@ -98,15 +103,16 @@ grow, connect, and lead with confidence building the
 skills, belief, and network to create lasting impact."
         tags={[
           "Online and in person",
-          <Fragment key="price">£299 for 12 months</Fragment>,
+          <Fragment key="price">{price.label} for 12 months</Fragment>,
         ]}
         cta={{ label: "Join the Circle", href: "#join" }}
         stats={[
           { value: "12", label: "Self-led learning modules a year", to: 12 },
           {
-            value: "299",
+            value: price.label,
             label: "For 12 months of membership",
-            to: 299,
+            // The counter only counts whole numbers.
+            to: Number.isInteger(price.pounds) ? price.pounds : undefined,
             prefix: "£",
           },
           { value: "5", label: "Stages of the Circle method", to: 5 },
@@ -225,7 +231,7 @@ skills, belief, and network to create lasting impact."
                 Membership
               </span>
               <div className="price" style={{ marginTop: 14 }}>
-                £299 <small>/ 12 months</small>
+                {price.label} <small>/ 12 months</small>
               </div>
               <p className="price-was">Payment opens 21 November</p>
             </div>
@@ -259,7 +265,7 @@ skills, belief, and network to create lasting impact."
           <Reveal as="p" delay={0.1} className="muted">
             Tell us who you are and we will email your personal payment link by
             21 November, plus what to expect in your first month. Membership is
-            £299 for 12 months.
+            {price.label} for 12 months.
           </Reveal>
           <JoinForm />
         </div>
@@ -273,7 +279,7 @@ skills, belief, and network to create lasting impact."
             </Reveal>
             <AnimatedHeading text="Before you join." />
           </div>
-          <Faq items={faqs} />
+          <Faq items={faqs(price.label)} />
         </div>
       </section>
 

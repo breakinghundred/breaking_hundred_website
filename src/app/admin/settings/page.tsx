@@ -8,9 +8,11 @@ import { fieldsIn } from "@/lib/email/source";
 import { getSource } from "@/lib/email/store";
 import { mightyConfigured } from "@/lib/mighty";
 import { checkPayments } from "@/lib/stripe";
-import { SETTING_FIELDS, getSettings, onboardingCallAt, type SettingKey, type Settings } from "@/lib/settings";
+import { DEFAULT_PRICE_POUNDS, formatPounds } from "@/lib/price-format";
+import { SETTING_FIELDS, getSettings, onboardingCallAt, priceFrom, type SettingKey, type Settings } from "@/lib/settings";
 import { ActionForm } from "../ActionForm";
-import { importAction, runJobsAction } from "../actions";
+import { runJobsAction } from "../actions";
+import { ImportForm } from "./ImportForm";
 import { SettingsForm, type FieldGroup } from "./SettingsForm";
 
 export const metadata: Metadata = { title: "Circle settings", robots: { index: false, follow: false } };
@@ -26,8 +28,11 @@ const HELP: Partial<Record<SettingKey, { hint: string; placeholder?: string; emp
   start_here_space_url: { hint: "Open the space on Mighty Networks and copy the address from the browser bar.", placeholder: "https://…" },
   academy_space_url: { hint: "Open the space on Mighty Networks and copy the address from the browser bar.", placeholder: "https://…" },
   monthly_live_url: { hint: "Open the space on Mighty Networks and copy the address from the browser bar.", placeholder: "https://…" },
-  ios_app_link: { hint: "Already filled in with the Mighty Networks app. Only change this if you have your own app." },
-  android_app_link: { hint: "Already filled in with the Mighty Networks app. Only change this if you have your own app." },
+  membership_price: {
+    hint: `In pounds, for example 299 or 299.50. Leave empty to use ${formatPounds(DEFAULT_PRICE_POUNDS)}.`,
+    placeholder: String(DEFAULT_PRICE_POUNDS),
+    emptyNote: `Uses ${formatPounds(DEFAULT_PRICE_POUNDS)}`,
+  },
 };
 
 /** Settings that reach emails through other merge fields as well as their own. */
@@ -37,7 +42,10 @@ const FEEDS: Partial<Record<SettingKey, string[]>> = {
   recording_link: ["recording_link", "onboarding_call_line"],
 };
 
-const GROUPS: { id: "call" | "links"; groups: { title?: string; keys: SettingKey[] }[] }[] = [
+type GroupId = "price" | "call" | "links";
+
+const GROUPS: { id: GroupId; groups: { title?: string; keys: SettingKey[] }[] }[] = [
+  { id: "price", groups: [{ keys: ["membership_price"] }] },
   {
     id: "call",
     groups: [
@@ -50,17 +58,20 @@ const GROUPS: { id: "call" | "links"; groups: { title?: string; keys: SettingKey
     groups: [
       { title: "The platform", keys: ["network_url", "network_invite_link"] },
       { title: "Spaces", keys: ["start_here_space_url", "academy_space_url", "monthly_live_url"] },
-      { title: "Phone apps", keys: ["ios_app_link", "android_app_link"] },
     ],
   },
 ];
 
-async function emailFieldUse(): Promise<Record<string, string[]>> {
+type EmailUse = { use: Record<string, string[]>; typedPrice: string[] };
+
+/** Which emails use each setting, and which have a price typed in by hand instead of {{membership_price}}. */
+async function emailFieldUse(): Promise<EmailUse> {
   try {
     const sources = await Promise.all(
       TEMPLATE_IDS.map(async (id) => {
         const s = await getSource(id);
-        return { name: TEMPLATE_INFO[id].name, fields: new Set(fieldsIn(`${s.subject}\n${s.body}`)) };
+        const text = `${s.subject}\n${s.body}`;
+        return { name: TEMPLATE_INFO[id].name, fields: new Set(fieldsIn(text)), typedPrice: /£\s?\d/.test(text) };
       }),
     );
     const out: Record<string, string[]> = {};
@@ -68,13 +79,13 @@ async function emailFieldUse(): Promise<Record<string, string[]>> {
       const feeds = FEEDS[key] ?? [key];
       out[key] = sources.filter((s) => feeds.some((f) => s.fields.has(f))).map((s) => `“${s.name}”`);
     }
-    return out;
+    return { use: out, typedPrice: sources.filter((s) => s.typedPrice).map((s) => `“${s.name}”`) };
   } catch {
-    return {};
+    return { use: {}, typedPrice: [] };
   }
 }
 
-function groupsFor(id: "call" | "links", settings: Settings, use: Record<string, string[]>): FieldGroup[] {
+function groupsFor(id: GroupId, settings: Settings, use: Record<string, string[]>): FieldGroup[] {
   const meta = new Map(SETTING_FIELDS.map((f) => [f.key, f]));
   return GROUPS.find((g) => g.id === id)!.groups.map((g) => ({
     title: g.title,
@@ -111,7 +122,7 @@ function Tile({ href, title, tone, children }: { href: string; title: string; to
 export default async function SettingsPage() {
   await requireAdminPage();
   const auto = mightyConfigured();
-  const [settings, jobs, payments, use, people] = await Promise.all([
+  const [settings, jobs, payments, { use, typedPrice }, people] = await Promise.all([
     getSettings(),
     db().jobRun.findMany({ orderBy: { startedAt: "desc" }, take: 1 }),
     checkPayments(),
@@ -119,6 +130,7 @@ export default async function SettingsPage() {
     db().member.count(),
   ]);
   const lastRun = jobs[0];
+  const price = priceFrom(settings);
   const now = new Date();
 
   const call = onboardingCallAt(settings);
@@ -132,7 +144,7 @@ export default async function SettingsPage() {
         : "The call has passed: add the recording link"
       : `${formatDate(call)}, ${formatTime(call)}${settings.onboarding_call_link ? "" : ". Joining link missing"}`;
 
-  const linkKeys = GROUPS[1].groups.flatMap((g) => g.keys);
+  const linkKeys = GROUPS.find((g) => g.id === "links")!.groups.flatMap((g) => g.keys);
   const missingLinks = linkKeys.filter((k) => !settings[k]);
   const lastRunText = lastRun
     ? lastRun.startedAt.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", timeZone: "Europe/London" })
@@ -151,7 +163,7 @@ export default async function SettingsPage() {
 
         <nav className="settings-tiles" aria-label="Settings at a glance">
           <Tile href="#payments" title="Payments" tone={payments.ok ? (payments.testMode ? "warn" : "ok") : "bad"}>
-            {payments.ok ? (payments.testMode ? "Working in test mode" : "Members can pay") : "Needs fixing: members can't pay"}
+            {payments.ok ? (payments.testMode ? `Test mode · ${price.label} a year` : `Members pay ${price.label} a year`) : "Needs fixing: members can't pay"}
           </Tile>
           <Tile href="#call" title="Onboarding call" tone={callTone}>{callText}</Tile>
           <Tile href="#links" title="Platform links" tone={missingLinks.length ? "warn" : "ok"}>
@@ -174,7 +186,7 @@ export default async function SettingsPage() {
             <ul className="status-list small">
               {payments.ok ? (
                 <>
-                  <li><span className="dot ok" aria-hidden />Stripe is connected and the £299 yearly price is set up.</li>
+                  <li><span className="dot ok" aria-hidden />Stripe is connected and the yearly membership is set up.</li>
                   {payments.testMode && (
                     <li><span className="dot warn" aria-hidden />These are test keys, so no real money is taken. Switch to the live keys before payment links go out.</li>
                   )}
@@ -188,6 +200,35 @@ export default async function SettingsPage() {
             {!payments.ok && (
               <p className="small muted">After fixing these with your developer, redeploy the site and reload this page to check again.</p>
             )}
+          </section>
+
+          <section className="detail-card settings-card" id="price">
+            <header className="settings-card-head">
+              <h2>Membership price</h2>
+              <span className="badge grey">{price.label} for 12 months</span>
+            </header>
+            <p className="settings-intro">
+              What new members pay for 12 months. It is shown on the website, on each person&apos;s payment page, in the
+              emails and at the Stripe checkout.
+            </p>
+            <ul className="status-list small">
+              <li>
+                <span className="dot" aria-hidden />
+                People who have already paid keep the price they joined at, including when they renew. A change only
+                applies to people who pay after you save it.
+              </li>
+              {typedPrice.length > 0 && (
+                <li>
+                  <span className="dot warn" aria-hidden />
+                  <span>
+                    These emails have a price typed into their wording, so it won&apos;t change by itself:{" "}
+                    {typedPrice.join(", ")}. In <Link href="/admin/emails">Automated emails</Link>, replace the price
+                    with <code>{"{{membership_price}}"}</code>.
+                  </span>
+                </li>
+              )}
+            </ul>
+            <SettingsForm groups={groupsFor("price", settings, use)} />
           </section>
 
           <section className="detail-card settings-card" id="call">
@@ -212,19 +253,19 @@ export default async function SettingsPage() {
 
           <section className="detail-card settings-card" id="import">
             <header className="settings-card-head">
-              <h2>Add people from a spreadsheet</h2>
+              <h2>Add people from a file</h2>
               <span className="badge grey">{people} {people === 1 ? "person" : "people"} on the list</span>
             </header>
             <ol className="settings-steps small">
-              <li>In Excel or Google Sheets, select three columns: <b>first name</b>, <b>last name</b> and <b>email</b>.</li>
-              <li>Copy them and paste them in the box below, one person per line.</li>
-              <li>Press <b>Add to the list</b>. People already on the list aren&apos;t added twice.</li>
+              <li>
+                In Excel or Google Sheets, make sure there are columns headed <b>First name</b>, <b>Last name</b> and{" "}
+                <b>Email</b>. A single <b>Name</b> column works too.
+              </li>
+              <li>Save or download it as an Excel file (.xlsx) or as CSV.</li>
+              <li>Choose the file below and press <b>Add to the list</b>. People already on the list aren&apos;t added twice.</li>
             </ol>
             <p className="small muted">Nobody is emailed now. They get their payment link when you press <em>Send payment links</em> on the dashboard.</p>
-            <ActionForm action={importAction} className="admin-settings">
-              <textarea name="csv" rows={6} className="textarea" aria-label="People to add" placeholder={"Ada, Okafor, ada@example.com\nGrace, Mensah, grace@example.com"} />
-              <button className="button outline" type="submit"><span>Add to the list</span></button>
-            </ActionForm>
+            <ImportForm />
           </section>
 
           <section className="detail-card settings-card" id="automatic">

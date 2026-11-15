@@ -8,23 +8,26 @@ export function stripe() {
 }
 
 /**
- * The single recurring £299 / 12 months Price (STRIPE_PRICE_ID).
+ * The Stripe Product and billing interval for membership, taken from the recurring
+ * Price in STRIPE_PRICE_ID. The amount is NOT taken from Stripe: it is the price set in
+ * /admin/settings (`getMembershipPrice`), so the team can change it without touching Stripe.
  *
  * The first period runs to the later of 18 Dec 2027 and 12 months after payment,
  * which can be longer than one year, so Checkout is created as:
- *   - the recurring Price, with `trial_end` = renewal date (no charge until then), plus
+ *   - a recurring item at the current price, with `trial_end` = renewal date (no charge until then), plus
  *   - a one-time line item for the same amount on the same Product, charged today.
- * Stripe bills one-time items on the first invoice, so she pays £299 now and the
- * next £299 is taken on her renewal date.
+ * Stripe bills one-time items on the first invoice, so she pays the price now and
+ * the same amount on her renewal date. Her subscription keeps that amount even if
+ * the price is changed later.
  */
-export async function membershipPrice() {
+export async function membershipProduct() {
   const price = await stripe().prices.retrieve(env("STRIPE_PRICE_ID"));
-  if (!price.recurring || price.unit_amount == null) throw new Error("STRIPE_PRICE_ID must be a recurring price with a fixed amount");
+  if (!price.recurring) throw new Error("STRIPE_PRICE_ID must be a recurring price");
   return {
-    id: price.id,
-    amount: price.unit_amount,
     currency: price.currency,
     product: typeof price.product === "string" ? price.product : price.product.id,
+    interval: price.recurring.interval,
+    intervalCount: price.recurring.interval_count,
   };
 }
 
@@ -57,9 +60,9 @@ export async function checkPayments(): Promise<PaymentsCheck> {
   if (!key) problems.push("The Stripe secret key (STRIPE_SECRET_KEY) is missing.");
   else if (!/^(sk|rk)_(live|test)_/.test(key)) problems.push("STRIPE_SECRET_KEY doesn't look like a Stripe secret key (it should start sk_live_ or sk_test_).");
 
-  if (!priceId) problems.push("STRIPE_PRICE_ID is missing. It should be the ID of the £299 yearly price in Stripe (it starts price_).");
+  if (!priceId) problems.push("STRIPE_PRICE_ID is missing. It should be the ID of the yearly membership price in Stripe (it starts price_).");
   else if (!priceId.startsWith("price_"))
-    problems.push(`STRIPE_PRICE_ID is “${priceId}”, but it must be the ID of the £299 yearly price in Stripe, which starts price_ (not the amount).`);
+    problems.push(`STRIPE_PRICE_ID is “${priceId}”, but it must be the ID of the yearly membership price in Stripe, which starts price_ (not the amount).`);
 
   if (!hook) problems.push("STRIPE_WEBHOOK_SECRET is missing, so payments can't be confirmed and members won't be marked paid.");
   else if (!hook.startsWith("whsec_"))
@@ -72,7 +75,7 @@ export async function checkPayments(): Promise<PaymentsCheck> {
       if (!price.recurring) problems.push("The price in STRIPE_PRICE_ID is a one-off price. It must repeat every 12 months.");
       else if (!(price.recurring.interval === "year" || (price.recurring.interval === "month" && price.recurring.interval_count === 12)))
         problems.push("The price in STRIPE_PRICE_ID doesn't repeat every 12 months.");
-      if (price.unit_amount == null) problems.push("The price in STRIPE_PRICE_ID has no fixed amount.");
+      if (price.currency !== "gbp") problems.push("The price in STRIPE_PRICE_ID isn't in pounds (GBP). Use a price in pounds.");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       problems.push(

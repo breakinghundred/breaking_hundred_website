@@ -32,7 +32,7 @@ export const TEMPLATE_INFO: Record<TemplateId, { name: string; trigger: string; 
   C21: { name: "Membership has ended", trigger: "The team ends her membership in /admin" },
 };
 
-/** Automated emails that can be sent to one person by hand from Contacts. C11 and C16 need details only the automation has. */
+/** Automated emails that can be sent to one person by hand from Manual mails. C11 and C16 need details only the automation has. */
 export const SENDABLE_TEMPLATE_IDS = TEMPLATE_IDS.filter((id) => !TEMPLATE_INFO[id].extra);
 
 /** Merge fields available in every email, with what they contain. */
@@ -45,7 +45,8 @@ export const MERGE_FIELDS: Record<string, string> = {
   contributor_form_link: "Her personal contributor form",
   renewal_date: "Next renewal date",
   access_end_date: "Date her access ends (renewal date)",
-  amount: "Amount paid, e.g. £299.00",
+  membership_price: "Current membership price, e.g. £299 (set in Settings)",
+  amount: "Amount she paid, e.g. £299.00",
   currency: "Currency, e.g. GBP",
   payment_reference: "Stripe payment reference",
   paid_at: "Date she paid",
@@ -87,6 +88,7 @@ export const SAMPLE_VARS: Vars = {
   contributor_form_link: "https://breakinghundred.org/contribute?t=example",
   renewal_date: "18 December 2027",
   access_end_date: "18 December 2027",
+  membership_price: "£299",
   amount: "£299.00",
   currency: "GBP",
   payment_reference: "BH-0001",

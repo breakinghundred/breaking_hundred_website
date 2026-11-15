@@ -18,7 +18,7 @@ export default async function DraftsPage() {
         <MailHeader
           active="drafts"
           title="Your emails"
-          intro="Write your own email, save it as a draft, and send it to one person, a few, or a whole group. Every registered member is already in Contacts."
+          intro="Write your own email, save it as a draft, and send it to one person, a few, or a whole group. Every registered member is already in Manual mails."
         />
 
         <form action={newDraftAction} className="mail-toolbar">

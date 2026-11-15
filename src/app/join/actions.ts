@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { renewalDateFor } from "@/lib/dates";
 import { siteUrl } from "@/lib/env";
-import { membershipPrice, stripe } from "@/lib/stripe";
+import { getMembershipPrice } from "@/lib/settings";
+import { membershipProduct, stripe } from "@/lib/stripe";
 import { readToken } from "@/lib/token";
 
 export type PayState = { error?: string };
@@ -23,17 +24,18 @@ export async function startCheckout(token: string, _prev: PayState, formData: Fo
 
   let url: string | null = null;
   try {
-    const price = await membershipPrice();
+    const [product, price] = await Promise.all([membershipProduct(), getMembershipPrice()]);
+    const item = { currency: product.currency, product: product.product, unit_amount: price.pence };
     const renewal = renewalDateFor(new Date());
     const session = await stripe().checkout.sessions.create({
       mode: "subscription",
       client_reference_id: member.id,
       ...(member.stripeCustomerId ? { customer: member.stripeCustomerId } : { customer_email: member.email }),
       line_items: [
-        // Next charge on the renewal date…
-        { price: price.id, quantity: 1 },
-        // …and the first £299 today (one-time items are billed on the first invoice).
-        { price_data: { currency: price.currency, product: price.product, unit_amount: price.amount }, quantity: 1 },
+        // Next charge on the renewal date, at today's price…
+        { price_data: { ...item, recurring: { interval: product.interval, interval_count: product.intervalCount } }, quantity: 1 },
+        // …and the first payment today (one-time items are billed on the first invoice).
+        { price_data: item, quantity: 1 },
       ],
       subscription_data: {
         trial_end: Math.floor(renewal.getTime() / 1000),
@@ -45,7 +47,7 @@ export async function startCheckout(token: string, _prev: PayState, formData: Fo
       cancel_url: `${siteUrl()}/join?t=${encodeURIComponent(token)}`,
       custom_text: {
         submit: {
-          message: `£299 today for your first membership period. Renews automatically at £299 on ${renewal.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} and every 12 months after. Cancel any time before a renewal date in your billing settings.`,
+          message: `${price.label} today for your first membership period. Renews automatically at ${price.label} on ${renewal.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} and every 12 months after. Cancel any time before a renewal date in your billing settings.`,
         },
       },
     });

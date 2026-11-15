@@ -11,7 +11,7 @@ import { STAGES, STAGE_ORDER } from "../../labels";
 import { MailHeader } from "../MailNav";
 import { newDraftAction, sendToContactAction } from "../mail-actions";
 
-export const metadata: Metadata = { title: "Contacts", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Manual mails", robots: { index: false, follow: false } };
 
 const PAGE = 100;
 
@@ -66,7 +66,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       <div className="wrap">
         <MailHeader
           active="contacts"
-          title="Contacts"
+          title="Manual mails"
           intro="Everyone who registers is added here automatically. Send any of your emails or an automated email to one person, or start a new email to them."
         />
 

@@ -7,7 +7,7 @@ import { useConfirmSubmit } from "./ConfirmDialog";
 import { PAYMENT_CHANGES } from "./labels";
 
 /** "Change payment status": every change emails the member, so the confirm says which email goes. */
-export function PaymentStatusForm({ id, name, options }: { id: string; name: string; options: PaymentChange[] }) {
+export function PaymentStatusForm({ id, name, options, defaultAmount }: { id: string; name: string; options: PaymentChange[]; defaultAmount: number }) {
   const [state, formAction, pending] = useActionState(paymentStatusAction, {});
   const [change, setChange] = useState<PaymentChange | "">("");
   const [guard, dialog] = useConfirmSubmit();
@@ -50,7 +50,7 @@ export function PaymentStatusForm({ id, name, options }: { id: string; name: str
         <>
           <label className="small">
             Amount paid (£)
-            <input name="amount" inputMode="decimal" defaultValue="299" className="admin-input" />
+            <input name="amount" inputMode="decimal" defaultValue={String(defaultAmount)} className="admin-input" />
           </label>
           <label className="small">
             Payment reference (optional)

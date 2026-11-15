@@ -2,7 +2,7 @@ import "server-only";
 import type { Member } from "@/generated/prisma/client";
 import { formatDate, formatMoney, formatTime, renewalDateFor } from "../dates";
 import { siteUrl } from "../env";
-import { onboardingCallAt, type Settings } from "../settings";
+import { onboardingCallAt, priceFrom, type Settings } from "../settings";
 import { makeToken } from "../token";
 import type { Vars } from "./templates";
 
@@ -34,6 +34,7 @@ export function memberVars(member: Member, settings: Settings, now = new Date())
     last_name: member.lastName,
     email: member.email,
     renewal_date: formatDate(member.renewalDate ?? renewalDateFor(now)),
+    membership_price: priceFrom(settings).label,
     amount: formatMoney(member.amount, member.currency ?? "gbp"),
     currency: (member.currency ?? "gbp").toUpperCase(),
     payment_reference: member.paymentReference ?? "",

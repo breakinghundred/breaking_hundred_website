@@ -38,7 +38,7 @@ export const templates = {
     blocks: [
       `Dear ${v.first_name},`,
       "Membership of The Circle is now open, and your place is ready to confirm.",
-      `Membership is £299 for 12 months. It renews automatically on ${v.renewal_date} and every 12 months after that, and you can cancel at any time before a renewal date and keep your access until then. To join, use your personal link below, which takes you to our website to pay securely by card through Stripe:`,
+      `Membership is ${v.membership_price} for 12 months. It renews automatically on ${v.renewal_date} and every 12 months after that, and you can cancel at any time before a renewal date and keep your access until then. To join, use your personal link below, which takes you to our website to pay securely by card through Stripe:`,
       v.payment_link,
       `Once your payment is confirmed you will receive a separate email within minutes with step by step instructions for joining the platform. Our onboarding call takes place in December (${v.onboarding_call_date_or_tbc}).`,
       "If you have any difficulty paying, reply to this email and we will help.",
@@ -50,7 +50,7 @@ export const templates = {
     subject: "Your place in The Circle is waiting",
     blocks: [
       `Dear ${v.first_name},`,
-      "We have not yet received your membership payment, so your place in The Circle is not yet confirmed. Membership is £299 for 12 months.",
+      `We have not yet received your membership payment, so your place in The Circle is not yet confirmed. Membership is ${v.membership_price} for 12 months.`,
       `To complete your membership, use your personal link: ${v.payment_link}`,
       "If you have already paid, you do not need to do anything, your confirmation will arrive shortly. If you had a problem paying, reply to this email and we will help.",
       team,
