@@ -433,7 +433,6 @@ input:focus-visible {
 }
 .join-form textarea:hover { border-color: var(--wine); }
 .join-form textarea:focus-visible { outline: 3px solid var(--rose); outline-offset: 3px; }
-.join-form .optional { font-weight: 500; color: var(--muted); }
 .join-form select {
   width: 100%;
   border: 1px solid #bdb0b8;

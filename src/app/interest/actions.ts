@@ -35,7 +35,7 @@ const schema = z.object({
     .refine((v) => /^\+?[\d\s().-]+$/.test(v) && /^(\D*\d){7,15}\D*$/.test(v), "Please enter a valid phone number, including the country code"),
   country: z.string().refine((c) => COUNTRY_CODES.has(c), "Please choose your country of residence"),
   jobTitle: z.string().trim().min(2, "Please add your job title").max(150),
-  organisation: z.string().trim().max(200),
+  organisation: z.string().trim().min(2, "Please add your organisation or company").max(200),
   describesYou: z.string().refine((c) => DESCRIBES_YOU_CODES.has(c), "Please choose what best describes you"),
   whyJoin: z
     .string()

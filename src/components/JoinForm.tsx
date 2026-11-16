@@ -128,9 +128,16 @@ export function JoinForm({ startOpen = false }: { startOpen?: boolean }) {
               />
             </label>
             <label>
-              Organisation or company <span className="optional">(optional)</span>
+              Organisation or company
               {/* Not named "company": that is the honeypot field below. */}
-              <input name="organisation" autoComplete="organization" maxLength={200} defaultValue={v.organisation} />
+              <input
+                name="organisation"
+                autoComplete="organization"
+                required
+                minLength={2}
+                maxLength={200}
+                defaultValue={v.organisation}
+              />
             </label>
             <label className="wide">
               Which best describes you?
