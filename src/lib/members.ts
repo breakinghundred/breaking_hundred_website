@@ -33,6 +33,10 @@ export async function registerInterest(input: {
   consent: boolean;
   phone?: string;
   country?: string;
+  jobTitle?: string;
+  organisation?: string;
+  describesYou?: string;
+  whyJoin?: string;
 }) {
   const email = normaliseEmail(input.email);
   const details = {
@@ -41,6 +45,10 @@ export async function registerInterest(input: {
     emailConsent: input.consent,
     ...(input.phone ? { phone: input.phone.trim() } : {}),
     ...(input.country ? { country: input.country } : {}),
+    ...(input.jobTitle ? { jobTitle: input.jobTitle.trim() } : {}),
+    ...(input.organisation ? { organisation: input.organisation.trim() } : {}),
+    ...(input.describesYou ? { describesYou: input.describesYou } : {}),
+    ...(input.whyJoin ? { whyJoin: input.whyJoin.trim() } : {}),
   };
   const member = await db().member.upsert({
     where: { email },

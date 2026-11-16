@@ -4,6 +4,7 @@ import { useActionState, useEffect, useId, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { submitInterest, type InterestState } from "@/app/interest/actions";
 import { COUNTRIES } from "@/lib/countries";
+import { DESCRIBES_YOU } from "@/lib/describes-you";
 import { site } from "@/lib/site";
 import { EASE } from "./motion";
 
@@ -114,6 +115,35 @@ export function JoinForm({ startOpen = false }: { startOpen?: boolean }) {
                   <option key={c.code} value={c.code}>{c.name}</option>
                 ))}
               </select>
+            </label>
+            <label>
+              Job title
+              <input
+                name="jobTitle"
+                autoComplete="organization-title"
+                required
+                minLength={2}
+                maxLength={150}
+                defaultValue={v.jobTitle}
+              />
+            </label>
+            <label>
+              Organisation or company <span className="optional">(optional)</span>
+              {/* Not named "company": that is the honeypot field below. */}
+              <input name="organisation" autoComplete="organization" maxLength={200} defaultValue={v.organisation} />
+            </label>
+            <label className="wide">
+              Which best describes you?
+              <select name="describesYou" required defaultValue={v.describesYou ?? ""}>
+                <option value="" disabled>Choose one</option>
+                {DESCRIBES_YOU.map((d) => (
+                  <option key={d.code} value={d.code}>{d.label}</option>
+                ))}
+              </select>
+            </label>
+            <label className="wide">
+              Why are you interested in joining Breaking Hundred?
+              <textarea name="whyJoin" required minLength={10} maxLength={2000} rows={5} defaultValue={v.whyJoin} />
             </label>
             <label className="wide check">
               <input name="consent" type="checkbox" required />

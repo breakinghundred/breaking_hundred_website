@@ -418,6 +418,22 @@ input:focus-visible {
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 .join-form input:hover { border-color: var(--wine); }
+.join-form textarea {
+  display: block;
+  width: 100%;
+  min-height: 130px;
+  resize: vertical;
+  border: 1px solid #bdb0b8;
+  background: #fff;
+  padding: 14px;
+  font: inherit;
+  margin-top: 7px;
+  border-radius: 0;
+  transition: border-color 0.3s;
+}
+.join-form textarea:hover { border-color: var(--wine); }
+.join-form textarea:focus-visible { outline: 3px solid var(--rose); outline-offset: 3px; }
+.join-form .optional { font-weight: 500; color: var(--muted); }
 .join-form select {
   width: 100%;
   border: 1px solid #bdb0b8;
@@ -988,6 +1004,9 @@ form.inline .admin-msg { margin-top: 0; }
 .reveal.is-open .join-form > :nth-child(6) { transition-delay: 0.48s; }
 .reveal.is-open .join-form > :nth-child(7) { transition-delay: 0.54s; }
 .reveal.is-open .join-form > :nth-child(8) { transition-delay: 0.60s; }
+.reveal.is-open .join-form > :nth-child(9) { transition-delay: 0.66s; }
+.reveal.is-open .join-form > :nth-child(10) { transition-delay: 0.72s; }
+.reveal.is-open .join-form > :nth-child(n+11) { transition-delay: 0.78s; }
 
 /* thank-you card fades in where the form was */
 .reveal-done { animation: reveal-done 0.6s var(--ease-out-expo) both; }

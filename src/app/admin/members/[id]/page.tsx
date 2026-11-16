@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { requireStaff } from "@/lib/staff";
 import { countryName } from "@/lib/countries";
+import { describesYouLabel } from "@/lib/describes-you";
 import { db } from "@/lib/db";
 import { formatDate, formatMoney } from "@/lib/dates";
 import { TEMPLATE_INFO } from "@/lib/email/catalogue";
@@ -86,6 +87,10 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
                 ["Email", <a key="e" href={`mailto:${m.email}`}>{m.email}</a>],
                 ["Phone", m.phone ? <a key="p" href={`tel:${m.phone.replace(/\s/g, "")}`}>{m.phone}</a> : null],
                 ["Country of residence", countryName(m.country) || null],
+                ["Job title", m.jobTitle],
+                ["Organisation", m.organisation],
+                ["Best describes her", describesYouLabel(m.describesYou) || null],
+                ["Why she wants to join", m.whyJoin ? <span key="w" style={{ whiteSpace: "pre-wrap" }}>{m.whyJoin}</span> : null],
                 ["Registered on", when(m.eoiSubmittedAt)],
                 ["Happy to receive emails", m.emailConsent ? "Yes" : "No"],
                 ["Email used on Mighty Networks", m.mnEmail ?? (m.mnJoinedAt ? "Same as above" : null)],
