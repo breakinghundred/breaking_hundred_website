@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { safeNext } from "@/lib/admin-session";
 import { currentStaff } from "@/lib/staff";
 import { LoginForm } from "./LoginForm";
+import { LoginHelp } from "../help";
 
 export const metadata: Metadata = { title: "Admin sign in", robots: { index: false, follow: false } };
 
@@ -20,6 +21,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="flow-card">
           <LoginForm next={next} />
         </div>
+        <LoginHelp />
       </div>
     </section>
   );

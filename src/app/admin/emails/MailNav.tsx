@@ -11,7 +11,7 @@ const TABS = [
 export type MailTab = (typeof TABS)[number]["key"];
 
 /** Header and section menu shared by every page under /admin/emails. */
-export function MailHeader({ active, title, intro }: { active: MailTab; title: string; intro?: React.ReactNode }) {
+export function MailHeader({ active, title, intro, help }: { active: MailTab; title: string; intro?: React.ReactNode; help?: React.ReactNode }) {
   return (
     <>
       <p className="small"><Link href="/admin">← Member admin</Link></p>
@@ -25,6 +25,7 @@ export function MailHeader({ active, title, intro }: { active: MailTab; title: s
         ))}
       </nav>
       {intro && <p className="muted mail-intro">{intro}</p>}
+      {help}
     </>
   );
 }

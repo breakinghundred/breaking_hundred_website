@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MIN_PASSWORD, ROLE_LABELS, readInvite } from "@/lib/staff";
 import { WelcomeForm } from "./WelcomeForm";
+import { WelcomeHelp } from "../help";
 
 export const metadata: Metadata = { title: "Set your password", robots: { index: false, follow: false } };
 
@@ -23,6 +24,7 @@ export default async function WelcomePage({ searchParams }: { searchParams: Prom
             <div className="flow-card">
               <WelcomeForm token={t} email={user.email} min={MIN_PASSWORD} />
             </div>
+            <WelcomeHelp />
           </>
         ) : (
           <>

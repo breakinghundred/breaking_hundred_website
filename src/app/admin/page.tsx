@@ -1,3 +1,4 @@
+import { DashboardHelp } from "./help";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Member, MemberStatus } from "@/generated/prisma/client";
@@ -84,6 +85,8 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
             </form>
           </nav>
         </header>
+
+        <DashboardHelp isAdmin={isAdmin} />
 
         {!payments.ok && (
           <p className="warn small">

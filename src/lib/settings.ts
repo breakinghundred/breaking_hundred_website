@@ -11,7 +11,7 @@ export const SETTING_FIELDS = [
   { key: "network_invite_link", label: "Invite link to join the network" },
   { key: "start_here_space_url", label: "Start Here space" },
   { key: "academy_space_url", label: "Academy space" },
-  { key: "monthly_live_url", label: "Monthly Live space" },
+  { key: "monthly_live_url", label: "Community Space" },
   { key: "ios_app_link", label: "iPhone app (App Store)" },
   { key: "android_app_link", label: "Android app (Google Play)" },
   { key: "onboarding_call_at", label: "Date and time (UK time)", type: "datetime-local" },
@@ -19,6 +19,7 @@ export const SETTING_FIELDS = [
   { key: "calendar_link", label: "Add-to-calendar link" },
   { key: "recording_link", label: "Recording link" },
   { key: "membership_price", label: "Price for 12 months (£)", type: "price" },
+  { key: "membership_discount_price", label: "Discounted price (£)", type: "discount" },
 ] as const;
 
 export type SettingKey = (typeof SETTING_FIELDS)[number]["key"];
@@ -48,12 +49,29 @@ export async function saveSettings(values: Partial<Settings>) {
   );
 }
 
-export type MembershipPrice = { pounds: number; pence: number; label: string };
+export type MembershipPrice = {
+  /** What members pay: the discounted price when a discount is set, otherwise the main price. */
+  pounds: number;
+  pence: number;
+  label: string;
+  /** The main price, set only while a discount applies. Shown struck through before `label`. */
+  full: { pounds: number; label: string } | null;
+};
 
-/** The membership price from the settings, e.g. { pounds: 299, pence: 29900, label: "£299" }. */
-export function priceFrom(settings: Pick<Settings, "membership_price">): MembershipPrice {
-  const pounds = parsePounds(settings.membership_price) ?? DEFAULT_PRICE_POUNDS;
-  return { pounds, pence: Math.round(pounds * 100), label: formatPounds(pounds) };
+/**
+ * The membership price from the settings, e.g. { pounds: 299, pence: 29900, label: "£299", full: null }.
+ * A discount only counts when it is a valid price below the main price.
+ */
+export function priceFrom(settings: Partial<Pick<Settings, "membership_price" | "membership_discount_price">>): MembershipPrice {
+  const main = parsePounds(settings.membership_price) ?? DEFAULT_PRICE_POUNDS;
+  const discount = parsePounds(settings.membership_discount_price);
+  const pounds = discount && discount < main ? discount : main;
+  return {
+    pounds,
+    pence: Math.round(pounds * 100),
+    label: formatPounds(pounds),
+    full: pounds < main ? { pounds: main, label: formatPounds(main) } : null,
+  };
 }
 
 /**
@@ -65,7 +83,10 @@ export async function getMembershipPrice(): Promise<MembershipPrice> {
     return priceFrom(await getSettings());
   } catch (e) {
     console.error("Could not read the membership price", e);
-    return priceFrom({ membership_price: process.env.MEMBERSHIP_PRICE ?? "" });
+    return priceFrom({
+      membership_price: process.env.MEMBERSHIP_PRICE ?? "",
+      membership_discount_price: process.env.MEMBERSHIP_DISCOUNT_PRICE ?? "",
+    });
   }
 }
 

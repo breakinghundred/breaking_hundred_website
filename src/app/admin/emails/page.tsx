@@ -7,6 +7,7 @@ import { MailHeader } from "./MailNav";
 import { testEmailsAction } from "./actions";
 import { TEMPLATE_IDS, TEMPLATE_INFO } from "@/lib/email/catalogue";
 import { editedIds, getSource } from "@/lib/email/store";
+import { AutomatedEmailsHelp } from "../help";
 
 export const metadata: Metadata = { title: "Automated emails", robots: { index: false, follow: false } };
 
@@ -21,6 +22,7 @@ export default async function EmailsPage() {
       <div className="wrap">
         <MailHeader
           active="automated"
+          help={<AutomatedEmailsHelp />}
           title="Automated emails"
           intro={
             <>

@@ -1401,3 +1401,32 @@ details.mini form { margin-top: 8px; }
 .import-drop-title { font-weight: 700; overflow-wrap: anywhere; }
 .import-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
 @media (prefers-reduced-motion: reduce) { .import-drop { transition: none; } }
+
+/* Admin: "How to use this page" help panels */
+.page-help { margin: 18px 0 24px; max-width: 820px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.page-help > summary {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; list-style: none;
+  font-weight: 700; color: var(--wine); min-height: 44px;
+}
+.page-help > summary::-webkit-details-marker { display: none; }
+.page-help > summary::after { content: "Show"; margin-left: auto; font-size: 0.8rem; font-weight: 600; color: #8a7c85; }
+.page-help[open] > summary::after { content: "Hide"; }
+.page-help > summary:focus-visible { outline: 2px solid var(--wine); outline-offset: 2px; border-radius: 10px; }
+.page-help-icon {
+  display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 50%;
+  background: var(--wine); color: #fff; font-size: 0.8rem;
+}
+.page-help-body { padding: 4px 16px 16px; border-top: 1px solid var(--line); font-size: 0.95rem; line-height: 1.6; }
+.page-help-body > p, .page-help-part p { margin: 10px 0; }
+.page-help-part + .page-help-part { margin-top: 6px; }
+.page-help-part h3 { font-size: 1rem; margin: 18px 0 6px; }
+.page-help-body ol, .page-help-body ul { margin: 8px 0; padding-left: 24px; }
+.page-help-body ol { list-style: decimal; }
+.page-help-body ul { list-style: disc; }
+.page-help-body li { display: list-item; margin: 6px 0; padding-left: 2px; }
+.page-help-body li::marker { color: var(--wine); font-weight: 700; }
+.page-help-body code { font-size: 0.85em; background: #f5eef1; padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.page-help-body kbd {
+  font: inherit; font-size: 0.8em; padding: 1px 6px; border: 1px solid #d8c9d0; border-bottom-width: 2px;
+  border-radius: 4px; background: #fbf8f9; white-space: nowrap;
+}

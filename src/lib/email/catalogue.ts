@@ -45,7 +45,7 @@ export const MERGE_FIELDS: Record<string, string> = {
   contributor_form_link: "Her personal contributor form",
   renewal_date: "Next renewal date",
   access_end_date: "Date her access ends (renewal date)",
-  membership_price: "Current membership price, e.g. £299 (set in Settings)",
+  membership_price: "What new members pay, e.g. £299 (set in Settings; the discounted price while a discount is on)",
   amount: "Amount she paid, e.g. £299.00",
   currency: "Currency, e.g. GBP",
   payment_reference: "Stripe payment reference",

@@ -12,6 +12,7 @@ import { requireAdminPage } from "@/lib/staff";
 import { ActionForm } from "../../ActionForm";
 import { MailHeader } from "../MailNav";
 import { designAction } from "../mail-actions";
+import { DesignsHelp } from "../../help";
 
 export const metadata: Metadata = { title: "Email designs", robots: { index: false, follow: false } };
 
@@ -31,6 +32,7 @@ export default async function DesignsPage({ searchParams }: { searchParams: Prom
       <div className="wrap">
         <MailHeader
           active="designs"
+          help={<DesignsHelp />}
           title="Designs"
           intro="Choose how your emails look. The wording stays the same in every design. The house design is used for all automated emails; any single email, and each of your own emails, can use a different one."
         />

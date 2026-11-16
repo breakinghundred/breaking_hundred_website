@@ -15,6 +15,7 @@ import { PaymentStatusForm } from "../../PaymentStatusForm";
 import { memberAction } from "../../actions";
 import { newDraftAction } from "../../emails/mail-actions";
 import { STAGES, billingLabel } from "../../labels";
+import { MemberHelp } from "../../help";
 
 export const metadata: Metadata = { title: "Member details", robots: { index: false, follow: false } };
 
@@ -73,6 +74,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
         <p>
           <span className={`badge ${stage.tone}`}>{stage.label}</span> <span className="muted small">{stage.help}</span>
         </p>
+        <MemberHelp isAdmin={isAdmin} />
         {m.followUpFlag && <p className="warn small">Needs a personal follow-up. <a href="#notes">See notes</a></p>}
 
         <div className="detail-grid">

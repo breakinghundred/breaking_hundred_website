@@ -14,6 +14,7 @@ import { ActionForm } from "../ActionForm";
 import { runJobsAction } from "../actions";
 import { ImportForm } from "./ImportForm";
 import { SettingsForm, type FieldGroup } from "./SettingsForm";
+import { SettingsHelp } from "../help";
 
 export const metadata: Metadata = { title: "Circle settings", robots: { index: false, follow: false } };
 
@@ -23,20 +24,26 @@ const HELP: Partial<Record<SettingKey, { hint: string; placeholder?: string; emp
   onboarding_call_link: { hint: "The Zoom, Teams or Meet link members click to join.", placeholder: "https://zoom.us/j/…" },
   calendar_link: { hint: "A link that adds the call to members' calendars.", placeholder: "https://…", emptyNote: "Optional" },
   recording_link: { hint: "Add this after the call. Once the call has passed, emails share the recording instead of the joining link.", placeholder: "https://…", emptyNote: "Add after the call" },
-  network_url: { hint: "The address members use to open The Circle in a browser.", placeholder: "https://yournetwork.mn.co" },
-  network_invite_link: { hint: "The link that lets a paid member create their account on the platform.", placeholder: "https://…" },
-  start_here_space_url: { hint: "Open the space on Mighty Networks and copy the address from the browser bar.", placeholder: "https://…" },
-  academy_space_url: { hint: "Open the space on Mighty Networks and copy the address from the browser bar.", placeholder: "https://…" },
-  monthly_live_url: { hint: "Open the space on Mighty Networks and copy the address from the browser bar.", placeholder: "https://…" },
+  network_url: { hint: "The address of your network's home page on Mighty Networks, for example https://yourname.mn.co. Open it in your browser and copy it from the address bar.", placeholder: "https://yournetwork.mn.co" },
+  network_invite_link: { hint: "The link that lets a paid member create their account. On Mighty Networks, open Invite, copy the shareable invite link and paste it here.", placeholder: "https://…" },
+  start_here_space_url: { hint: "On a computer, open this space on Mighty Networks in your web browser (not the app). Click the address bar at the top of the browser, copy the whole address and paste it here.", placeholder: "https://…" },
+  academy_space_url: { hint: "On a computer, open this space on Mighty Networks in your web browser (not the app). Click the address bar at the top of the browser, copy the whole address and paste it here.", placeholder: "https://…" },
+  monthly_live_url: { hint: "On a computer, open this space on Mighty Networks in your web browser (not the app). Click the address bar at the top of the browser, copy the whole address and paste it here.", placeholder: "https://…" },
   membership_price: {
     hint: `In pounds, for example 299 or 299.50. Leave empty to use ${formatPounds(DEFAULT_PRICE_POUNDS)}.`,
     placeholder: String(DEFAULT_PRICE_POUNDS),
     emptyNote: `Uses ${formatPounds(DEFAULT_PRICE_POUNDS)}`,
   },
+  membership_discount_price: {
+    hint: "Optional. A lower price, in pounds, for example 199. While it is set, the website shows the main price crossed out next to it, and new members are charged the discounted price, including when they renew. Leave empty for no discount.",
+    placeholder: "No discount",
+    emptyNote: "No discount",
+  },
 };
 
 /** Settings that reach emails through other merge fields as well as their own. */
 const FEEDS: Partial<Record<SettingKey, string[]>> = {
+  membership_discount_price: ["membership_price"],
   onboarding_call_at: ["onboarding_call_date", "onboarding_call_time", "onboarding_call_date_or_tbc", "onboarding_call_line"],
   onboarding_call_link: ["onboarding_call_link", "onboarding_call_line"],
   recording_link: ["recording_link", "onboarding_call_line"],
@@ -45,7 +52,7 @@ const FEEDS: Partial<Record<SettingKey, string[]>> = {
 type GroupId = "price" | "call" | "links";
 
 const GROUPS: { id: GroupId; groups: { title?: string; keys: SettingKey[] }[] }[] = [
-  { id: "price", groups: [{ keys: ["membership_price"] }] },
+  { id: "price", groups: [{ keys: ["membership_price", "membership_discount_price"] }] },
   {
     id: "call",
     groups: [
@@ -161,6 +168,8 @@ export default async function SettingsPage() {
           is marked in amber or red.
         </p>
 
+        <SettingsHelp />
+
         <nav className="settings-tiles" aria-label="Settings at a glance">
           <Tile href="#payments" title="Payments" tone={payments.ok ? (payments.testMode ? "warn" : "ok") : "bad"}>
             {payments.ok ? (payments.testMode ? `Test mode · ${price.label} a year` : `Members pay ${price.label} a year`) : "Needs fixing: members can't pay"}
@@ -205,7 +214,9 @@ export default async function SettingsPage() {
           <section className="detail-card settings-card" id="price">
             <header className="settings-card-head">
               <h2>Membership price</h2>
-              <span className="badge grey">{price.label} for 12 months</span>
+              <span className="badge grey">
+                {price.full ? <><s>{price.full.label}</s> {price.label} for 12 months (discount on)</> : <>{price.label} for 12 months</>}
+              </span>
             </header>
             <p className="settings-intro">
               What new members pay for 12 months. It is shown on the website, on each person&apos;s payment page, in the

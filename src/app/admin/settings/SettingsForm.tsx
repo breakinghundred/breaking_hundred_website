@@ -11,7 +11,7 @@ export type FieldView = {
   placeholder?: string;
   /** Shown instead of "Not filled in" when leaving it empty is fine. */
   emptyNote?: string;
-  type: "url" | "datetime-local" | "price";
+  type: "url" | "datetime-local" | "price" | "discount";
   value: string;
   usedIn: string[];
 };
@@ -25,6 +25,22 @@ function readable(raw: string) {
   const day = d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
   const time = d.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "UTC" }).replace(" ", "");
   return `${day} at ${time} UK time`;
+}
+
+/** What members will see for a discount, given the main price typed in the same form. */
+function discountPreview(raw: string, mainRaw: string) {
+  if (!raw.trim()) return <>No discount. Members see and pay the main price.</>;
+  const discount = parsePounds(raw);
+  if (!discount) return <>Enter the discounted price in pounds, for example 199 or 199.50.</>;
+  const main = parsePounds(mainRaw);
+  if (!main) return <>Enter the main price first.</>;
+  if (discount >= main) return <>The discounted price must be less than the main price ({formatPounds(main)}).</>;
+  return (
+    <>
+      Members will see: <s>{formatPounds(main)}</s> <b>{formatPounds(discount)} for 12 months</b>, and pay{" "}
+      {formatPounds(discount)}.
+    </>
+  );
 }
 
 function usedInText(usedIn: string[]) {
@@ -55,6 +71,7 @@ export function SettingsForm({ groups }: { groups: FieldGroup[] }) {
             const empty = !v.trim();
             const isUrl = f.type === "url";
             const isPrice = f.type === "price";
+            const isDiscount = f.type === "discount";
             const isDate = f.type === "datetime-local";
             const openable = isUrl && /^https?:\/\/\S+\.\S+$/i.test(v.trim());
             return (
@@ -68,8 +85,8 @@ export function SettingsForm({ groups }: { groups: FieldGroup[] }) {
                   <input
                     id={`s-${f.key}`}
                     name={f.key}
-                    type={isPrice ? "text" : f.type}
-                    inputMode={isUrl ? "url" : isPrice ? "decimal" : undefined}
+                    type={isPrice || isDiscount ? "text" : f.type}
+                    inputMode={isUrl ? "url" : isPrice || isDiscount ? "decimal" : undefined}
                     value={v}
                     placeholder={f.placeholder}
                     onChange={(e) => setValues((s) => ({ ...s, [f.key]: e.target.value }))}
@@ -94,6 +111,11 @@ export function SettingsForm({ groups }: { groups: FieldGroup[] }) {
                     ) : (
                       <>Enter the price in pounds, for example 299 or 299.50.</>
                     )}
+                  </p>
+                )}
+                {isDiscount && (
+                  <p className="settings-preview small">
+                    {discountPreview(v, values.membership_price ?? "")}
                   </p>
                 )}
                 {isDate && (

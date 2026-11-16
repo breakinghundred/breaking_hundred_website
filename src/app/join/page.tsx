@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { formatDate, renewalDateFor } from "@/lib/dates";
 import { makeToken, readToken } from "@/lib/token";
 import { getMembershipPrice } from "@/lib/settings";
+import { MembershipPriceText } from "@/components/Price";
 import { site } from "@/lib/site";
 import { PayForm } from "./PayForm";
 
@@ -56,7 +57,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
       <div className="flow-card">
         <dl className="facts">
           <dt>Price</dt>
-          <dd>{price.label} for your first membership period</dd>
+          <dd><MembershipPriceText price={price} /> for your first membership period</dd>
           <dt>Renews</dt>
           <dd>Automatically on {renewal}, then every 12 months, at {price.label}</dd>
           <dt>Cancel</dt>

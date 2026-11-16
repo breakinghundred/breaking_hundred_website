@@ -5,6 +5,7 @@ import { requireAdminPage } from "@/lib/staff";
 import { ActionForm } from "../../ActionForm";
 import { MailHeader } from "../MailNav";
 import { logoAction, uploadLogoAction } from "../mail-actions";
+import { LogosHelp } from "../../help";
 
 export const metadata: Metadata = { title: "Email logos", robots: { index: false, follow: false } };
 
@@ -18,6 +19,7 @@ export default async function LogosPage() {
       <div className="wrap">
         <MailHeader
           active="logos"
+          help={<LogosHelp />}
           title="Logos"
           intro="Logos appear side by side at the top of your emails. Tick “Automated emails” to show a logo on every automated email. For your own emails, you choose the logos on each one."
         />

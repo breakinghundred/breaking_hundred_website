@@ -8,6 +8,7 @@ import { listLogos, logoPath } from "@/lib/email/logos";
 import { getSource } from "@/lib/email/store";
 import type { TemplateId } from "@/lib/email/templates";
 import { Editor } from "./Editor";
+import { EmailEditorHelp } from "../../help";
 
 export const metadata: Metadata = { title: "Edit email", robots: { index: false, follow: false } };
 
@@ -32,6 +33,7 @@ export default async function EditEmailPage({ params }: { params: Promise<{ id: 
         <p className="muted small">
           {source.edited ? `Edited wording, last saved ${source.updatedAt!.toLocaleString("en-GB")}.` : "Original wording."}
         </p>
+        <EmailEditorHelp />
         <Editor id={id} subject={source.subject} body={source.body} edited={source.edited} logos={logos} design={designs.templates[id] ?? ""} house={designs.house} />
       </div>
     </section>

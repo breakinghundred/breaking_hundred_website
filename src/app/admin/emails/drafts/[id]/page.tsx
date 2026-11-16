@@ -9,6 +9,7 @@ import { senderDetails } from "@/lib/email/send";
 import { requireAdminPage } from "@/lib/staff";
 import { STAGES, STAGE_ORDER } from "../../../labels";
 import { DraftEditor } from "./DraftEditor";
+import { DraftEditorHelp } from "../../../help";
 
 export const metadata: Metadata = { title: "Write an email", robots: { index: false, follow: false } };
 
@@ -40,6 +41,7 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
           {" "}From {sender.from}; replies go to {sender.replyTo}.
           {!sender.configured && <span className="warn"> Email is not set up on this site yet, so nothing will be delivered.</span>}
         </p>
+        <DraftEditorHelp />
         <DraftEditor
           draft={{
             id: draft.id,

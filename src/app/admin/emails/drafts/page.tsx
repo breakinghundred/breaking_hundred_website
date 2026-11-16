@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/dates";
 import { requireAdminPage } from "@/lib/staff";
 import { MailHeader } from "../MailNav";
 import { newDraftAction } from "../mail-actions";
+import { DraftsHelp } from "../../help";
 
 export const metadata: Metadata = { title: "Your emails", robots: { index: false, follow: false } };
 
@@ -17,6 +18,7 @@ export default async function DraftsPage() {
       <div className="wrap">
         <MailHeader
           active="drafts"
+          help={<DraftsHelp />}
           title="Your emails"
           intro="Write your own email, save it as a draft, and send it to one person, a few, or a whole group. Every registered member is already in Manual mails."
         />

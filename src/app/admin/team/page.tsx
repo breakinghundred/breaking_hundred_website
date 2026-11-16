@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { ROLE_LABELS, ownerEmail, requireAdminPage } from "@/lib/staff";
 import { ActionForm } from "../ActionForm";
 import { addStaffAction, staffAction } from "./actions";
+import { TeamHelp } from "../help";
 
 export const metadata: Metadata = { title: "Circle team", robots: { index: false, follow: false } };
 
@@ -23,6 +24,7 @@ export default async function TeamPage() {
         <p className="muted" style={{ maxWidth: 720 }}>
           Everyone who can sign in to this dashboard. Each person signs in with their own email and password.
         </p>
+        <TeamHelp />
         <ul className="role-key small">
           {Object.values(ROLE_LABELS).map((r) => (
             <li key={r.label}><span className={`badge ${r.label === "Admin" ? "plum" : "blue"}`}>{r.label}</span> {r.help}</li>

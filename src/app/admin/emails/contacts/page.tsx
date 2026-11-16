@@ -10,6 +10,7 @@ import { ActionForm } from "../../ActionForm";
 import { STAGES, STAGE_ORDER } from "../../labels";
 import { MailHeader } from "../MailNav";
 import { newDraftAction, sendToContactAction } from "../mail-actions";
+import { ManualMailsHelp } from "../../help";
 
 export const metadata: Metadata = { title: "Manual mails", robots: { index: false, follow: false } };
 
@@ -66,6 +67,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       <div className="wrap">
         <MailHeader
           active="contacts"
+          help={<ManualMailsHelp />}
           title="Manual mails"
           intro="Everyone who registers is added here automatically. Send any of your emails or an automated email to one person, or start a new email to them."
         />

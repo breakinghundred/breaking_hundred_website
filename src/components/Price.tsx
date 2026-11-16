@@ -13,3 +13,8 @@ export function Price({ was, now }: { was: string; now: ReactNode }) {
     </span>
   );
 }
+
+/** The membership price as members read it: struck-through main price first while a discount applies. */
+export function MembershipPriceText({ price }: { price: { label: string; full: { label: string } | null } }) {
+  return price.full ? <Price was={price.full.label} now={price.label} /> : <>{price.label}</>;
+}

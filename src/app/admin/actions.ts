@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import { runDailyJobs } from "@/lib/jobs";
 import { changePaymentStatus, completeSpaces, resendPaymentLink, resendPaymentLinks, grantSpaces, importInterest, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
 import { SETTING_FIELDS, getMembershipPrice, saveSettings, type Settings } from "@/lib/settings";
-import { formatPounds, parsePounds } from "@/lib/price-format";
+import { DEFAULT_PRICE_POUNDS, formatPounds, parsePounds } from "@/lib/price-format";
 import { MAX_IMPORT_BYTES, readPeopleFile, type ImportResult } from "@/lib/import-file";
 
 export type AdminState = { message?: string; error?: string };
@@ -113,6 +113,19 @@ export async function saveSettingsAction(_prev: AdminState, formData: FormData):
         if (!pounds) throw new Error("Please enter the membership price in pounds, for example 299 or 299.50.");
         values[f.key] = String(pounds);
         continue;
+      } else if ("type" in f && f.type === "discount") {
+        // Empty means no discount.
+        if (!value) {
+          values[f.key] = "";
+          continue;
+        }
+        const pounds = parsePounds(value);
+        if (!pounds) throw new Error("Please enter the discounted price in pounds, for example 199 or 199.50, or leave it empty for no discount.");
+        // The main price is saved in the same form (and checked just above); fall back to the stored one.
+        const main = parsePounds(values.membership_price) ?? (await getMembershipPrice()).full?.pounds ?? DEFAULT_PRICE_POUNDS;
+        if (pounds >= main) throw new Error(`The discounted price must be less than the main price (${formatPounds(main)}). Leave it empty for no discount.`);
+        values[f.key] = String(pounds);
+        continue;
       } else if ("type" in f) {
         if (value && Number.isNaN(new Date(`${value}Z`).getTime())) throw new Error("Please choose the date and time of the call again.");
       } else if (value && !/^https?:\/\/[^\s]+\.[^\s]+$/i.test(value)) {
@@ -123,8 +136,13 @@ export async function saveSettingsAction(_prev: AdminState, formData: FormData):
     if (!Object.keys(values).length) throw new Error("Something went wrong. Please refresh the page and try again.");
     await saveSettings(values);
     // The public pages quote the price too.
-    if (values.membership_price) revalidatePath("/", "layout");
-    if (values.membership_price) return `Saved. New payments, the website and emails now use ${formatPounds(Number(values.membership_price))}.`;
+    if ("membership_price" in values || "membership_discount_price" in values) {
+      revalidatePath("/", "layout");
+      const price = await getMembershipPrice();
+      return price.full
+        ? `Saved. The website shows ${price.full.label} crossed out, and new payments and emails use the discounted ${price.label}.`
+        : `Saved. New payments, the website and emails now use ${price.label}.`;
+    }
     return "Saved. New emails will use these details.";
   }, true);
 }

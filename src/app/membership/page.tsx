@@ -12,6 +12,7 @@ import { scaleIn } from "@/components/motion";
 import { Testimonials } from "@/components/Testimonials";
 import { connection } from "next/server";
 import { getMembershipPrice } from "@/lib/settings";
+import { MembershipPriceText } from "@/components/Price";
 import { method } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -103,7 +104,7 @@ grow, connect, and lead with confidence building the
 skills, belief, and network to create lasting impact."
         tags={[
           "Online and in person",
-          <Fragment key="price">{price.label} for 12 months</Fragment>,
+          <Fragment key="price"><MembershipPriceText price={price} /> for 12 months</Fragment>,
         ]}
         cta={{ label: "Join the Circle", href: "#join" }}
         stats={[
@@ -114,6 +115,7 @@ skills, belief, and network to create lasting impact."
             // The counter only counts whole numbers.
             to: Number.isInteger(price.pounds) ? price.pounds : undefined,
             prefix: "£",
+            was: price.full?.label,
           },
           { value: "5", label: "Stages of the Circle method", to: 5 },
         ]}
@@ -231,7 +233,7 @@ skills, belief, and network to create lasting impact."
                 Membership
               </span>
               <div className="price" style={{ marginTop: 14 }}>
-                {price.label} <small>/ 12 months</small>
+                <MembershipPriceText price={price} /> <small>/ 12 months</small>
               </div>
               <p className="price-was">Payment opens 21 November</p>
             </div>
@@ -264,8 +266,8 @@ skills, belief, and network to create lasting impact."
           <AnimatedHeading text="Register your interest." />
           <Reveal as="p" delay={0.1} className="muted">
             Tell us who you are and we will email your personal payment link by
-            21 November, plus what to expect in your first month. Membership is
-            {price.label} for 12 months.
+            21 November, plus what to expect in your first month. Membership is{" "}
+            <MembershipPriceText price={price} /> for 12 months.
           </Reveal>
           <JoinForm />
         </div>
