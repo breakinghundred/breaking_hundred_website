@@ -1,20 +1,17 @@
 /**
  * Step-by-step help for every admin page, written for someone using the dashboard
- * for the first time. Each page shows its help in a "How to use this page" panel
- * that is closed until clicked. Keep the wording plain: no codes, no jargon, and
+ * for the first time. Each page shows its help in a "How to use this page" popup
+ * that opens when its button is clicked. Keep the wording plain: no codes, no jargon, and
  * say exactly what to click.
  */
 import type { ReactNode } from "react";
+import { HelpPopup } from "./HelpPopup";
 
 export function PageHelp({ title = "How to use this page", children }: { title?: string; children: ReactNode }) {
   return (
-    <details className="page-help">
-      <summary>
-        <span className="page-help-icon" aria-hidden>?</span>
-        {title}
-      </summary>
-      <div className="page-help-body">{children}</div>
-    </details>
+    <div className="page-help">
+      <HelpPopup title={title}>{children}</HelpPopup>
+    </div>
   );
 }
 
