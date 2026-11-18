@@ -1464,3 +1464,10 @@ details.mini form { margin-top: 8px; }
   font: inherit; font-size: 0.8em; padding: 1px 6px; border: 1px solid #d8c9d0; border-bottom-width: 2px;
   border-radius: 4px; background: #fbf8f9; white-space: nowrap;
 }
+
+/* ---------- Terms and privacy pages ---------- */
+.legal h2 { font-size: clamp(1.5rem, 2.6vw, 2rem); margin: 44px 0 14px; scroll-margin-top: 120px; }
+.legal h3 { font-size: 1.15rem; margin: 26px 0 10px; }
+.legal p { line-height: 1.7; }
+.legal a { color: var(--wine); }
+.legal-foot { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); }

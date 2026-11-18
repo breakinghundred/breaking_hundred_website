@@ -14,8 +14,12 @@ export async function startCheckout(token: string, _prev: PayState, formData: Fo
   const memberId = readToken(token, "join");
   if (!memberId) return { error: "This payment link is not valid. Please use the link in your email." };
   if (formData.get("agree") !== "on") {
-    return { error: "Please tick the box to agree to the terms and ask for access to start straight away." };
+    return { error: "Please tick the box to agree to the payment and ask for access to start straight away." };
   }
+  if (formData.get("terms") !== "on") {
+    return { error: "Please tick the box to confirm you have read and agree to our terms and conditions and privacy policy." };
+  }
+  const termsAcceptedAt = new Date().toISOString();
 
   const member = await db().member.findUnique({ where: { id: memberId } });
   if (!member) return { error: "We could not find your registration. Please reply to your email and we will help." };
@@ -39,9 +43,9 @@ export async function startCheckout(token: string, _prev: PayState, formData: Fo
       ],
       subscription_data: {
         trial_end: Math.floor(renewal.getTime() / 1000),
-        metadata: { member_id: member.id },
+        metadata: { member_id: member.id, terms_accepted_at: termsAcceptedAt },
       },
-      metadata: { member_id: member.id },
+      metadata: { member_id: member.id, terms_accepted_at: termsAcceptedAt },
       payment_method_collection: "always",
       success_url: `${siteUrl()}/join/thanks?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${siteUrl()}/join?t=${encodeURIComponent(token)}`,

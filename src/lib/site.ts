@@ -2,7 +2,8 @@ export const site = {
   name: "Breaking Hundred Circle",
   tagline: "Built to lead. Backed to rise.",
   email: "admin@breakinghundred.org",
-  privacy: "https://breakinghundred.org/privacy-policy/",
+  privacy: "/privacy",
+  terms: "/terms",
   socials: [
     { label: "Instagram", href: "https://www.instagram.com/breakinghundredcircle/" },
     { label: "LinkedIn", href: "https://www.linkedin.com/company/breakinghundredcircle/" },

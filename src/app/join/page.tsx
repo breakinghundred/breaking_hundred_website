@@ -67,7 +67,7 @@ export default async function JoinPage({ searchParams }: { searchParams: Promise
         </dl>
         <PayForm token={t} renewalDate={renewal} price={price.label} />
         <p className="notice">
-          Read our <a href={site.privacy} target="_blank" rel="noopener noreferrer">privacy policy</a>. Questions?
+          Questions?
           Email <a href={`mailto:${site.email}`}>{site.email}</a>.
         </p>
       </div>
