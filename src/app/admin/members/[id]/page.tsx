@@ -11,8 +11,10 @@ import { TEMPLATE_INFO } from "@/lib/email/catalogue";
 import type { TemplateId } from "@/lib/email/templates";
 import { paymentChangesFor } from "@/lib/members";
 import { getMembershipPrice } from "@/lib/settings";
+import { pausedIds } from "@/lib/email/paused";
 import { ActionForm } from "../../ActionForm";
 import { PaymentStatusForm } from "../../PaymentStatusForm";
+import { JoinedButton } from "../../JoinedButton";
 import { memberAction } from "../../actions";
 import { newDraftAction } from "../../emails/mail-actions";
 import { STAGES, billingLabel } from "../../labels";
@@ -46,9 +48,10 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
   const staff = await requireStaff();
   const isAdmin = staff.role === "admin";
   const { id } = await params;
-  const [m, price] = await Promise.all([
+  const [m, price, paused] = await Promise.all([
     db().member.findUnique({ where: { id }, include: { emails: { orderBy: { sentAt: "desc" } }, manualPayments: { orderBy: { createdAt: "desc" } } } }),
     getMembershipPrice(),
+    pausedIds(),
   ]);
   if (!m) notFound();
 
@@ -139,13 +142,19 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
             {isAdmin && (
               <details className="mini">
                 <summary>Change payment status</summary>
-                <PaymentStatusForm id={m.id} name={name || m.email} options={paymentChangesFor(m.status)} defaultAmount={price.pounds} />
+                <PaymentStatusForm id={m.id} name={name || m.email} options={paymentChangesFor(m.status)} defaultAmount={price.pounds} emailsOff={[...paused]} />
               </details>
             )}
           </div>
 
           <div className="detail-card">
             <h2>Journey</h2>
+            {(m.status === "paid" || m.status === "invited") && (
+              <div className="notes-block">
+                <p className="small muted">Can you see her in Start Here on Mighty Networks? Tick it here so the site knows.</p>
+                <JoinedButton id={m.id} name={m.firstName || m.email} />
+              </div>
+            )}
             <ol className="timeline">
               {journey.map(([label, date]) => (
                 <li key={label} className={date ? "done" : ""}>

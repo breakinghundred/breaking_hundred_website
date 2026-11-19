@@ -1160,6 +1160,7 @@ details.mini form { margin-top: 8px; }
 .pay-form label { display: grid; gap: 4px; }
 .pay-form p { margin: 0; }
 .pay-form .button { justify-self: start; }
+tr.email-off td:not(:last-child) { opacity: 0.55; }
 .sig-pad { display: grid; gap: 4px; font-size: 0.9rem; }
 .sig-canvas { width: 100%; height: 120px; background: #fff; border: 1px solid var(--line); border-radius: 6px; touch-action: none; cursor: crosshair; }
 .sig-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

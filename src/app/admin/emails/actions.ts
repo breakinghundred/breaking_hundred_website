@@ -4,6 +4,8 @@ import { SAMPLE_VARS, TEMPLATE_IDS, TEMPLATE_INFO } from "@/lib/email/catalogue"
 import { sendPreviews, sendTeamEmail, senderDetails } from "@/lib/email/send";
 import { compile } from "@/lib/email/source";
 import { getSource } from "@/lib/email/store";
+import { setPaused } from "@/lib/email/paused";
+import { revalidatePath } from "next/cache";
 import type { TemplateId } from "@/lib/email/templates";
 import { ADMIN_ONLY, currentStaff } from "@/lib/staff";
 import type { AdminState } from "../actions";
@@ -54,3 +56,25 @@ export async function testEmailsAction(_prev: AdminState, formData: FormData): P
 }
 
 const done = (to: string, what: string) => `Sent ${what} to ${to}. Allow a minute, and check spam if nothing arrives.`;
+
+/** Turn one automated email off (it stops sending by itself) or back on. */
+export async function toggleEmailAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
+  const staff = await currentStaff();
+  if (!staff) return { error: "Please sign in again." };
+  if (staff.role !== "admin") return { error: ADMIN_ONLY };
+  const id = String(formData.get("id") ?? "") as TemplateId;
+  if (!TEMPLATE_IDS.includes(id)) return { error: "Please refresh the page and try again." };
+  const off = formData.get("op") === "off";
+  try {
+    await setPaused(id, off);
+  } catch (e) {
+    console.error("Toggle email failed", e);
+    return { error: "Sorry, that did not work. Please try again." };
+  }
+  revalidatePath("/admin", "layout");
+  return {
+    message: off
+      ? `“${TEMPLATE_INFO[id].name}” is turned off. It won't be sent to anyone until you turn it back on.`
+      : `“${TEMPLATE_INFO[id].name}” is turned on again. It will be sent as normal from now on.`,
+  };
+}

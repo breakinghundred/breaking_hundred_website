@@ -9,6 +9,7 @@ import { countryName } from "@/lib/countries";
 import { mightyConfigured } from "@/lib/mighty";
 import { checkPayments } from "@/lib/stripe";
 import { ActionForm } from "./ActionForm";
+import { JoinedButton } from "./JoinedButton";
 import { signOut } from "./login/actions";
 import { ALERT_TITLES, STAGES, STAGE_ORDER, billingLabel, plain } from "./labels";
 import {
@@ -340,6 +341,7 @@ function Stage({ m }: { m: Row }) {
     <>
       <span className={`badge ${stage.tone}`}>{stage.label}</span>
       <div className="muted small stage-help">{stage.help}</div>
+      {(m.status === "paid" || m.status === "invited") && <JoinedButton id={m.id} name={m.firstName || m.email} link />}
     </>
   );
 }

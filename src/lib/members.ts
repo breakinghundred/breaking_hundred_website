@@ -103,7 +103,8 @@ export async function openPayments(limit = 200) {
 export async function resendPaymentLink(memberId: string) {
   const member = await db().member.findUniqueOrThrow({ where: { id: memberId } });
   if (member.status !== "payment_open") throw new Error("Please refresh the page: she is not waiting to pay any more.");
-  await sendMemberEmail(member, "C02", { sendKey: `resend-${Date.now()}` });
+  // Pressed for one person on purpose, so it goes even if the email is turned off.
+  await sendMemberEmail(member, "C02", { sendKey: `resend-${Date.now()}`, force: true });
 }
 
 /**
@@ -346,6 +347,19 @@ export async function grantSpaces(memberId: string) {
   }
 
   return completeSpaces(member.id);
+}
+
+/**
+ * The team ticks that she has joined the platform (Start Here on Mighty Networks), for when the
+ * Mighty Networks webhook can't tell us. Same next step as the webhook: add her to her spaces.
+ */
+export async function markJoinedPlatform(memberId: string) {
+  const claimed = await db().member.updateMany({
+    where: { id: memberId, status: { in: [...PAID_STATES] } },
+    data: { status: "joined_network", mnJoinedAt: new Date() },
+  });
+  if (claimed.count === 0) return { result: "skipped" as const };
+  return grantSpaces(memberId);
 }
 
 export async function completeSpaces(memberId: string) {

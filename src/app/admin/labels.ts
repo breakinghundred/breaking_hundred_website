@@ -46,3 +46,12 @@ export const PAYMENT_CHANGES = {
   failed: { label: "Renewal payment failed", email: "an email asking her to update her payment details" },
   ended: { label: "Membership ended (removes her access)", email: "an email saying her membership has ended" },
 } as const;
+
+/** The automated emails each payment change sends, to warn when one is turned off. */
+export const PAYMENT_CHANGE_EMAILS: Record<keyof typeof PAYMENT_CHANGES, string[]> = {
+  paid: ["C04", "C05"],
+  unpaid: ["C19"],
+  up_to_date: ["C20"],
+  failed: ["C16"],
+  ended: ["C21"],
+};

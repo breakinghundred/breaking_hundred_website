@@ -4,7 +4,8 @@ import { requireAdminPage } from "@/lib/staff";
 import { senderDetails } from "@/lib/email/send";
 import { ActionForm } from "../ActionForm";
 import { MailHeader } from "./MailNav";
-import { testEmailsAction } from "./actions";
+import { testEmailsAction, toggleEmailAction } from "./actions";
+import { pausedIds } from "@/lib/email/paused";
 import { TEMPLATE_IDS, TEMPLATE_INFO } from "@/lib/email/catalogue";
 import { editedIds, getSource } from "@/lib/email/store";
 import { AutomatedEmailsHelp } from "../help";
@@ -14,7 +15,7 @@ export const metadata: Metadata = { title: "Automated emails", robots: { index: 
 export default async function EmailsPage() {
   const staff = await requireAdminPage();
   const sender = senderDetails();
-  const edited = await editedIds();
+  const [edited, paused] = await Promise.all([editedIds(), pausedIds()]);
   const subjects = await Promise.all(TEMPLATE_IDS.map(async (id) => (await getSource(id)).subject));
 
   return (
@@ -66,17 +67,31 @@ export default async function EmailsPage() {
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
-              <tr><th>ID</th><th>Email</th><th>Subject</th><th>Sent when</th><th>Wording</th></tr>
+              <tr><th>ID</th><th>Email</th><th>Subject</th><th>Sent when</th><th>Wording</th><th>Sending</th></tr>
             </thead>
             <tbody>
               {TEMPLATE_IDS.map((id, i) => (
-                <tr key={id}>
+                <tr key={id} className={paused.has(id) ? "email-off" : undefined}>
                   <td><Link href={`/admin/emails/${id}`}><b>{id}</b></Link></td>
                   <td><Link href={`/admin/emails/${id}`}>{TEMPLATE_INFO[id].name}</Link></td>
                   <td className="small">{subjects[i]}</td>
                   <td className="small muted">{TEMPLATE_INFO[id].trigger}</td>
                   <td className="small">
                     {edited.has(id) ? `Edited ${edited.get(id)!.toLocaleDateString("en-GB")}` : <span className="muted">Original</span>}
+                  </td>
+                  <td className="small">
+                    <span className={`badge ${paused.has(id) ? "red" : "green"}`}>{paused.has(id) ? "Off" : "On"}</span>
+                    <ActionForm
+                      action={toggleEmailAction}
+                      confirm={
+                        paused.has(id)
+                          ? { title: `Turn “${TEMPLATE_INFO[id].name}” back on?`, message: "From now on it sends by itself again. Emails that were skipped while it was off are not sent.", confirmLabel: "Turn on" }
+                          : { title: `Turn off “${TEMPLATE_INFO[id].name}”?`, message: ["Nobody will be sent this email by the site until you turn it back on.", "Emails skipped while it is off are not sent later."], confirmLabel: "Turn off" }
+                      }
+                    >
+                      <input type="hidden" name="id" value={id} />
+                      <button name="op" value={paused.has(id) ? "on" : "off"} className="link-btn">{paused.has(id) ? "Turn on" : "Turn off"}</button>
+                    </ActionForm>
                   </td>
                 </tr>
               ))}

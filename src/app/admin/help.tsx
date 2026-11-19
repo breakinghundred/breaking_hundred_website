@@ -99,6 +99,16 @@ export function DashboardHelp({ isAdmin }: { isAdmin: boolean }) {
         </ol>
       </Part>
 
+      <Part title="Ticking that someone has joined the platform">
+        <p>While the site can&apos;t see Mighty Networks by itself, tell it when a paid member has joined:</p>
+        <ol>
+          <li>On Mighty Networks, check the person is in <b>Start Here</b>.</li>
+          <li>Under <b>Members</b>, find their name. Under their stage, click <b>Tick: joined the platform</b> (or open their details page and press <b>✓ She has joined the platform</b> in the <b>Journey</b> box).</li>
+          <li>Read the pop-up and press <b>Yes, she has joined</b>. This also stops the &ldquo;please join&rdquo; reminder emails.</li>
+          <li>They now appear in <b>Needs your attention</b> as &ldquo;Add [name] to the private spaces&rdquo;. Follow the steps below.</li>
+        </ol>
+      </Part>
+
       <Part title="“Needs your attention”: jobs to do by hand">
         <p><b>“Add [name] to the private spaces”</b> means they have paid and created their Mighty Networks account, but still need to be put into the private areas:</p>
         <ol>
@@ -183,6 +193,14 @@ export function MemberHelp({ isAdmin }: { isAdmin: boolean }) {
           <li>Press <b>Save notes</b>. Whatever is in the box replaces what was there before, so add to the existing text rather than deleting it.</li>
           <li>If they are marked as needing a follow-up, contact them, then press <b>Mark as done</b>.</li>
         </ol>
+      </Part>
+      <Part title="Ticking that they have joined the platform">
+        <ol>
+          <li>Check on Mighty Networks that they are in <b>Start Here</b>.</li>
+          <li>In the <b>Journey</b> box, press <b>✓ She has joined the platform</b>, then <b>Yes, she has joined</b>.</li>
+          <li>Add them to the five private spaces on Mighty Networks, then press <b>Spaces added</b> on the dashboard. That sends their welcome email.</li>
+        </ol>
+        <p>The button only shows for people who have paid but aren&apos;t marked as joined yet.</p>
       </Part>
       <Part title="They joined Mighty Networks with a different email">
         <ol>
@@ -324,6 +342,14 @@ export function AutomatedEmailsHelp() {
           <li>In <b>What to send</b>, choose a quick check, one particular email, or every email.</li>
           <li>Press <b>Send test</b> and check that inbox. Tests have <b>[Test]</b> in the subject, use a pretend member (Ada Okafor), and are not sent to any real member.</li>
         </ol>
+      </Part>
+      <Part title="Turning an email off">
+        <ol>
+          <li>In the list, the <b>Sending</b> column shows <b>On</b> or <b>Off</b> for each email.</li>
+          <li>Click <b>Turn off</b> next to the email, read the pop-up and press <b>Turn off</b>. The site stops sending that email to anyone: reminders, welcome emails, and the emails that go out when you change a payment status.</li>
+          <li>To start it again, click <b>Turn on</b>. Emails that were skipped while it was off are <b>not</b> sent afterwards.</li>
+        </ol>
+        <p>Turning an email off doesn&apos;t stop you sending it to one person on purpose: <b>Contacts</b> and <b>Resend payment link</b> for one person still send it. Test emails also still work.</p>
       </Part>
       <Part title="Changing the wording of an email">
         <ol>

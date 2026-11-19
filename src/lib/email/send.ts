@@ -7,6 +7,7 @@ import { optionalEnv } from "../env";
 import { getSettings } from "../settings";
 import { designFor, designChoices } from "./design-store";
 import type { DesignId } from "./designs";
+import { pausedIds } from "./paused";
 import { NO_LOGOS, automatedLogos, logosById, type EmailLogos } from "./logos";
 import { renderHtml, renderText } from "./render";
 import { compile, type Source } from "./source";
@@ -64,8 +65,13 @@ async function deliver({ to, subject, blocks, logos: chosen = NO_LOGOS, design, 
 export async function sendMemberEmail(
   member: Member,
   templateId: TemplateId,
-  opts: { sendKey?: string; vars?: Vars; scheduledAt?: Date } = {},
+  opts: { sendKey?: string; vars?: Vars; scheduledAt?: Date; force?: boolean } = {},
 ): Promise<boolean> {
+  // Turned off in /admin/emails: skip it (and don't log it). `force` is a send chosen by hand.
+  if (!opts.force && (await pausedIds()).has(templateId)) {
+    console.info(`[email] ${templateId} is turned off; not sent to member ${member.id}`);
+    return false;
+  }
   const sendKey = opts.sendKey ?? "";
   let logId: string;
   try {

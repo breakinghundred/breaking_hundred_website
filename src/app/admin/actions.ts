@@ -5,9 +5,12 @@ import { checkPayments } from "@/lib/stripe";
 import { requireAdminAction, requireStaff } from "@/lib/staff";
 import { db } from "@/lib/db";
 import { runDailyJobs } from "@/lib/jobs";
-import { changePaymentStatus, completeSpaces, resendPaymentLink, resendPaymentLinks, grantSpaces, importInterest, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
+import { changePaymentStatus, completeSpaces, resendPaymentLink, resendPaymentLinks, grantSpaces, importInterest, markJoinedPlatform, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
 import { SETTING_FIELDS, getMembershipPrice, saveSettings, type Settings } from "@/lib/settings";
 import { DEFAULT_PRICE_POUNDS, formatPounds, parsePounds } from "@/lib/price-format";
+import { pausedIds } from "@/lib/email/paused";
+import type { TemplateId } from "@/lib/email/templates";
+import { PAYMENT_CHANGE_EMAILS } from "./labels";
 import { MAX_IMPORT_BYTES, readPeopleFile, type ImportResult } from "@/lib/import-file";
 
 export type AdminState = { message?: string; error?: string };
@@ -156,6 +159,13 @@ export async function memberAction(_prev: AdminState, formData: FormData): Promi
         const r = await grantSpaces(id);
         return SPACES_MESSAGE[r.result];
       }
+      case "mark-joined": {
+        const r = await markJoinedPlatform(id);
+        if (r.result === "skipped") return "Nothing to do: she is already marked as joined.";
+        return r.result === "manual"
+          ? "Marked as joined. Now add her to the five private spaces on Mighty Networks, then press Spaces added on the dashboard."
+          : SPACES_MESSAGE[r.result];
+      }
       case "spaces-added": {
         const r = await completeSpaces(id);
         return r.result === "in_circle" ? "Thank you. She is now an active member and her welcome email has been sent." : "Nothing to do: she has already been added.";
@@ -214,6 +224,18 @@ function readSignature(dataUrl: string): Buffer {
   return bytes;
 }
 
+/** The confirmation message, saying so when the email for that change is turned off. */
+async function paymentDone(change: PaymentChange) {
+  const paused = await pausedIds();
+  const ids = PAYMENT_CHANGE_EMAILS[change];
+  const off = ids.filter((t) => paused.has(t as TemplateId));
+  if (!off.length) return PAYMENT_DONE[change];
+  const saved = PAYMENT_DONE[change].split(". ")[0];
+  return off.length === ids.length
+    ? `${saved}. No email was sent, because that email is turned off in Automated emails.`
+    : `${PAYMENT_DONE[change]} (Part of this is turned off in Automated emails and was not sent.)`;
+}
+
 export async function paymentStatusAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
   return guarded(async () => {
     const id = String(formData.get("id"));
@@ -221,7 +243,7 @@ export async function paymentStatusAction(_prev: AdminState, formData: FormData)
     if (!(change in PAYMENT_DONE)) throw new Error("Please choose the new payment status.");
     if (change !== "paid") {
       await changePaymentStatus(id, change);
-      return PAYMENT_DONE[change];
+      return paymentDone(change);
     }
     // Recording a payment by hand: every field is compulsory, and the admin signs it.
     const staff = await requireAdminAction();
@@ -240,7 +262,7 @@ export async function paymentStatusAction(_prev: AdminState, formData: FormData)
       reference,
       signedBy: { staffId: staff.id, staffEmail: staff.email, name: signedName, signature },
     });
-    return PAYMENT_DONE[change];
+    return paymentDone(change);
   }, true);
 }
 

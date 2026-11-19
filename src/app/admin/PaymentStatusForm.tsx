@@ -5,14 +5,36 @@ import type { PaymentChange } from "@/lib/members";
 import { paymentStatusAction } from "./actions";
 import { useConfirmSubmit } from "./ConfirmDialog";
 import { SignaturePad } from "./SignaturePad";
-import { PAYMENT_CHANGES } from "./labels";
+import { PAYMENT_CHANGES, PAYMENT_CHANGE_EMAILS } from "./labels";
 
 /** "Change payment status": every change emails the member, so the confirm says which email goes. */
-export function PaymentStatusForm({ id, name, options, defaultAmount }: { id: string; name: string; options: PaymentChange[]; defaultAmount: number }) {
+export function PaymentStatusForm({
+  id,
+  name,
+  options,
+  defaultAmount,
+  emailsOff = [],
+}: {
+  id: string;
+  name: string;
+  options: PaymentChange[];
+  defaultAmount: number;
+  /** Automated emails turned off in /admin/emails. */
+  emailsOff?: string[];
+}) {
   const [state, formAction, pending] = useActionState(paymentStatusAction, {});
   const [change, setChange] = useState<PaymentChange | "">("");
   const [missing, setMissing] = useState("");
   const [guard, dialog] = useConfirmSubmit();
+  const off = change ? PAYMENT_CHANGE_EMAILS[change].filter((t) => emailsOff.includes(t)) : [];
+  const allOff = !!change && off.length === PAYMENT_CHANGE_EMAILS[change].length;
+  const emailLine = !change
+    ? ""
+    : allOff
+      ? "No email will be sent: that email is turned off in Automated emails."
+      : off.length
+        ? `She will be sent ${PAYMENT_CHANGES[change].email}, except the part turned off in Automated emails.`
+        : `She will be sent ${PAYMENT_CHANGES[change].email}.`;
 
   return (
     <form
@@ -33,11 +55,11 @@ export function PaymentStatusForm({ id, name, options, defaultAmount }: { id: st
         guard(e, {
           title: `Change ${name}'s payment status to "${PAYMENT_CHANGES[change].label}"?`,
           message: [
-            `She will be sent ${PAYMENT_CHANGES[change].email}.`,
+            emailLine,
             ...(change === "paid" ? ["Your name and signature will be saved with this payment record."] : []),
             "This updates our records only. It does not charge or refund anything in Stripe.",
           ],
-          confirmLabel: "Save and email her",
+          confirmLabel: allOff ? "Save" : "Save and email her",
         });
       }}
     >
@@ -84,9 +106,9 @@ export function PaymentStatusForm({ id, name, options, defaultAmount }: { id: st
           <SignaturePad name="signature" label="Your signature" />
         </>
       )}
-      {change && <p className="small muted">She will be sent {PAYMENT_CHANGES[change].email}.</p>}
+      {change && <p className="small muted">{emailLine}</p>}
       <button className="button small" disabled={!change || pending}>
-        {pending ? "Saving…" : "Save and email her"}
+        {pending ? "Saving…" : allOff ? "Save" : "Save and email her"}
       </button>
       {!pending && state.message && <span className="admin-msg ok" role="status">{state.message}</span>}
       {missing && <span className="admin-msg err" role="alert">{missing}</span>}

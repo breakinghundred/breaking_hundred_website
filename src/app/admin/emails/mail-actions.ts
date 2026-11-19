@@ -136,7 +136,7 @@ export async function sendToContactAction(_prev: AdminState, formData: FormData)
       await sendCustomEmail([member], draft, { logoIds: draft.logoIds, design: await draftDesign(draft.design), sendKey: `${draft.id}:${stamp}` });
       await db().emailDraft.update({ where: { id: draft.id }, data: { lastSentAt: new Date(), sentCount: { increment: 1 } } });
     } else if (SENDABLE_TEMPLATE_IDS.includes(what as TemplateId)) {
-      await sendMemberEmail(member, what as TemplateId, { sendKey: `manual-${stamp}` });
+      await sendMemberEmail(member, what as TemplateId, { sendKey: `manual-${stamp}`, force: true });
     } else {
       return { error: "Choose an email to send." };
     }
