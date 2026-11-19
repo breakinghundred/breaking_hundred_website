@@ -163,9 +163,11 @@ export function MemberHelp({ isAdmin }: { isAdmin: boolean }) {
             <li>First check the money has actually arrived in the bank account.</li>
             <li>In the <b>Payment</b> box, click <b>Change payment status</b> to open it.</li>
             <li>Choose <b>Paid (record a payment made outside the website)</b> from the list.</li>
-            <li>Check the amount (it starts at the current membership price) and type the bank reference if you have one.</li>
+            <li>Fill in <b>every</b> box: check the <b>Amount paid</b> (it starts at the current membership price) and type the <b>Payment reference</b> (for example the bank transfer reference). Neither can be left empty.</li>
+            <li>Type <b>Your full name</b>, then sign in the white <b>Your signature</b> box with your mouse or finger. Press <b>Clear</b> to start the signature again.</li>
             <li>Press the button, read the pop-up, which says which email they will get, and confirm.</li>
           </ol>
+          <p>Your name, email address and signature are saved with the payment and shown in the <b>Payment</b> box, so everyone can see who recorded it and when.</p>
           <p><b>Every status change emails them</b>, so only do it when you mean it. These changes only update our records: they never take, refund or cancel money in Stripe. To refund or cancel a card payment, do it in Stripe as well (use <b>View her membership in Stripe ↗</b> in the Payment box).</p>
         </Part>
       )}

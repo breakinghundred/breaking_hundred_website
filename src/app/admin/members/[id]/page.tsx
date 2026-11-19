@@ -47,7 +47,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
   const isAdmin = staff.role === "admin";
   const { id } = await params;
   const [m, price] = await Promise.all([
-    db().member.findUnique({ where: { id }, include: { emails: { orderBy: { sentAt: "desc" } } } }),
+    db().member.findUnique({ where: { id }, include: { emails: { orderBy: { sentAt: "desc" } }, manualPayments: { orderBy: { createdAt: "desc" } } } }),
     getMembershipPrice(),
   ]);
   if (!m) notFound();
@@ -113,6 +113,16 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
                 ["Payment reminders sent", m.paymentReminders || "None"],
               ]}
             />
+            {m.manualPayments.map((p, i) => (
+              <div key={p.id} className="sig-record">
+                <b className="small">{i === 0 && manual ? "Recorded and signed by" : "Earlier payment recorded and signed by"}</b>
+                <span className="small">
+                  {p.signedName} ({p.staffEmail}) on {when(p.createdAt)}: {formatMoney(p.amount, p.currency)}, reference {p.reference}
+                </span>
+                {/* eslint-disable-next-line @next/next/no-img-element -- a small PNG stored with the record */}
+                <img src={`data:image/png;base64,${Buffer.from(p.signature).toString("base64")}`} alt={`Signature of ${p.signedName}`} width={240} height={80} />
+              </div>
+            ))}
             {(m.stripeCustomerId || m.stripeSubscriptionId) && (
               <p className="small">
                 {m.stripeCustomerId && <a href={stripeUrl("customers", m.stripeCustomerId)} target="_blank" rel="noopener noreferrer">View her in Stripe ↗</a>}

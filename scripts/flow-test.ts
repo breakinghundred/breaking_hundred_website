@@ -18,7 +18,7 @@ const mn = (body: object) =>
 
 async function main() {
   const d = db();
-  await d.emailLog.deleteMany(); await d.alert.deleteMany(); await d.mightyEvent.deleteMany(); await d.member.deleteMany(); await d.jobRun.deleteMany();
+  await d.emailLog.deleteMany(); await d.manualPayment.deleteMany(); await d.alert.deleteMany(); await d.mightyEvent.deleteMany(); await d.member.deleteMany(); await d.jobRun.deleteMany();
 
   // Stage 1: same email twice → one record, one C01
   await registerInterest({ firstName: "Ada", lastName: "Okafor", email: "  Ada@Example.com ", consent: true });

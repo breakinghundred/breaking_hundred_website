@@ -201,20 +201,45 @@ const PAYMENT_DONE: Record<PaymentChange, string> = {
   ended: "Membership ended. She has been emailed to let her know.",
 };
 
+const MAX_SIGNATURE_BYTES = 200_000;
+const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/** The signature pad sends a PNG data URL. Check it really is a PNG of a sensible size. */
+function readSignature(dataUrl: string): Buffer {
+  const prefix = "data:image/png;base64,";
+  if (!dataUrl.startsWith(prefix)) throw new Error("Please sign in the signature box before saving.");
+  const bytes = Buffer.from(dataUrl.slice(prefix.length), "base64");
+  if (bytes.length < PNG_MAGIC.length || !PNG_MAGIC.every((b, i) => bytes[i] === b)) throw new Error("Please clear the signature box and sign again.");
+  if (bytes.length > MAX_SIGNATURE_BYTES) throw new Error("Please clear the signature box and sign again: that signature is too large.");
+  return bytes;
+}
+
 export async function paymentStatusAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
   return guarded(async () => {
     const id = String(formData.get("id"));
     const change = String(formData.get("change")) as PaymentChange;
     if (!(change in PAYMENT_DONE)) throw new Error("Please choose the new payment status.");
-    let amountPence: number | undefined;
-    if (change === "paid") {
-      const raw = String(formData.get("amount") ?? "").replace(/[£,\s]/g, "");
-      const price = await getMembershipPrice();
-      const pounds = raw ? Number(raw) : price.pounds;
-      if (!Number.isFinite(pounds) || pounds <= 0 || pounds > 10000) throw new Error(`Please enter the amount she paid in pounds, for example ${price.pounds}.`);
-      amountPence = Math.round(pounds * 100);
+    if (change !== "paid") {
+      await changePaymentStatus(id, change);
+      return PAYMENT_DONE[change];
     }
-    await changePaymentStatus(id, change, { amountPence, reference: String(formData.get("reference") ?? "") });
+    // Recording a payment by hand: every field is compulsory, and the admin signs it.
+    const staff = await requireAdminAction();
+    const raw = String(formData.get("amount") ?? "").replace(/[£,\s]/g, "");
+    const price = await getMembershipPrice();
+    const pounds = Number(raw);
+    if (!raw || !Number.isFinite(pounds) || pounds <= 0 || pounds > 10000) throw new Error(`Please enter the amount she paid in pounds, for example ${price.pounds}.`);
+    const reference = String(formData.get("reference") ?? "").trim();
+    if (!reference) throw new Error("Please enter the payment reference, for example the bank transfer reference.");
+    if (reference.length > 80) throw new Error("Please shorten the payment reference to 80 characters or fewer.");
+    const signedName = String(formData.get("signedName") ?? "").trim().replace(/\s+/g, " ");
+    if (signedName.length < 2 || signedName.length > 100) throw new Error("Please type your full name under your signature.");
+    const signature = readSignature(String(formData.get("signature") ?? ""));
+    await changePaymentStatus(id, change, {
+      amountPence: Math.round(pounds * 100),
+      reference,
+      signedBy: { staffId: staff.id, staffEmail: staff.email, name: signedName, signature },
+    });
     return PAYMENT_DONE[change];
   }, true);
 }

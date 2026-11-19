@@ -98,6 +98,7 @@ model Member {
   updatedAt            DateTime            @updatedAt
 
   emails               EmailLog[]
+  manualPayments       ManualPayment[]
 
   @@index([status])
 }
@@ -239,4 +240,26 @@ model EmailLogo {
   /// Removed from the library. The file is still served so emails already sent keep their logo.
   removedAt   DateTime?
   createdAt   DateTime  @default(now())
+}
+
+/// A payment recorded by hand in /admin ("Change payment status" → Paid), with the
+/// signature of the admin who recorded it. Kept even if the member is later set back to not paid.
+model ManualPayment {
+  id          String   @id @default(cuid())
+  memberId    String?
+  member      Member?  @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  /// Minor units (pence).
+  amount      Int
+  currency    String   @default("gbp")
+  reference   String
+  /// The signed-in account that recorded it (StaffUser id, or the main admin's fixed id).
+  staffId     String
+  staffEmail  String
+  /// Full name typed by the admin when signing.
+  signedName  String
+  /// The drawn signature, as a PNG.
+  signature   Bytes
+  createdAt   DateTime @default(now())
+
+  @@index([memberId])
 }

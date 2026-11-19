@@ -4,7 +4,6 @@ import { raiseAlert } from "./alerts";
 import { db } from "./db";
 import { DAY, renewalDateFor } from "./dates";
 import { sendMemberEmail } from "./email/send";
-import { getMembershipPrice } from "./settings";
 import {
   addToPrivateSpaces,
   findMemberByEmail,
@@ -166,10 +165,13 @@ export function paymentChangesFor(status: MemberStatus): PaymentChange[] {
  * The team changes a member's payment status by hand (e.g. she paid by bank transfer).
  * Every change emails her. This updates our records only: it never charges or refunds in Stripe.
  */
+/** The admin recording a payment by hand, and the signature she drew. */
+export type ManualPaymentSigner = { staffId: string; staffEmail: string; name: string; signature: Buffer };
+
 export async function changePaymentStatus(
   memberId: string,
   change: PaymentChange,
-  opts: { amountPence?: number; reference?: string } = {},
+  opts: { amountPence?: number; reference?: string; signedBy?: ManualPaymentSigner } = {},
 ) {
   const member = await db().member.findUniqueOrThrow({ where: { id: memberId } });
   if (!paymentChangesFor(member.status).includes(change)) {
@@ -181,25 +183,45 @@ export async function changePaymentStatus(
 
   switch (change) {
     case "paid": {
-      const reference = opts.reference?.trim() || `MANUAL-${now.getTime().toString(36).toUpperCase()}`;
+      // A hand-recorded payment needs every detail plus the signature of the admin recording it.
+      const reference = opts.reference?.trim();
+      const amount = opts.amountPence;
+      const signer = opts.signedBy;
+      if (!amount || amount <= 0) throw new Error("Please enter the amount she paid.");
+      if (!reference) throw new Error("Please enter the payment reference, for example the bank transfer reference.");
+      if (!signer || !signer.name.trim() || !signer.signature.length) throw new Error("Please type your full name and sign in the box.");
       let updated: Member;
       try {
-        updated = await db().member.update({
-          where: { id: member.id },
-          data: {
-            status: "paid",
-            paidAt: now,
-            amount: opts.amountPence ?? (await getMembershipPrice()).pence,
-            currency: "gbp",
-            priceTier: "manual",
-            paymentReference: reference,
-            renewalDate: renewalDateFor(now),
-            subscriptionStatus: "active",
-            failedPaymentCount: 0,
-            followUpFlag: false,
-            followUpReason: null,
-          },
-        });
+        [updated] = await db().$transaction([
+          db().member.update({
+            where: { id: member.id },
+            data: {
+              status: "paid",
+              paidAt: now,
+              amount,
+              currency: "gbp",
+              priceTier: "manual",
+              paymentReference: reference,
+              renewalDate: renewalDateFor(now),
+              subscriptionStatus: "active",
+              failedPaymentCount: 0,
+              followUpFlag: false,
+              followUpReason: null,
+            },
+          }),
+          db().manualPayment.create({
+            data: {
+              memberId: member.id,
+              amount,
+              currency: "gbp",
+              reference,
+              staffId: signer.staffId,
+              staffEmail: signer.staffEmail,
+              signedName: signer.name.trim(),
+              signature: new Uint8Array(signer.signature),
+            },
+          }),
+        ]);
       } catch (e) {
         if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
           throw new Error("Please use a different payment reference: that one is already recorded for someone else.");
