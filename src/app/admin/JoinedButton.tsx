@@ -22,3 +22,25 @@ export function JoinedButton({ id, name, link = false }: { id: string; name: str
     </ActionForm>
   );
 }
+
+/** "Joined spaces" tick, for members marked as joined who have now been added to the five private spaces. */
+export function SpacesButton({ id, name, link = false }: { id: string; name: string; link?: boolean }) {
+  return (
+    <ActionForm
+      action={memberAction}
+      confirm={{
+        title: `Have you added ${name} to all five private spaces?`,
+        message: [
+          "Academy, Library, Community, Monthly Live and Partner Directory, on Mighty Networks.",
+          "This makes her an active member and sends her welcome email straight away.",
+        ],
+        confirmLabel: "Yes, all five",
+      }}
+    >
+      <input type="hidden" name="id" value={id} />
+      <button name="op" value="spaces-added" className={link ? "link-btn" : "button small outline"}>
+        {link ? "Tick: joined spaces" : <span>✓ She has joined the private spaces</span>}
+      </button>
+    </ActionForm>
+  );
+}

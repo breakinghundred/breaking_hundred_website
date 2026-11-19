@@ -14,7 +14,7 @@ import { getMembershipPrice } from "@/lib/settings";
 import { pausedIds } from "@/lib/email/paused";
 import { ActionForm } from "../../ActionForm";
 import { PaymentStatusForm } from "../../PaymentStatusForm";
-import { JoinedButton } from "../../JoinedButton";
+import { JoinedButton, SpacesButton } from "../../JoinedButton";
 import { memberAction } from "../../actions";
 import { newDraftAction } from "../../emails/mail-actions";
 import { STAGES, billingLabel } from "../../labels";
@@ -153,6 +153,12 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
               <div className="notes-block">
                 <p className="small muted">Can you see her in Start Here on Mighty Networks? Tick it here so the site knows.</p>
                 <JoinedButton id={m.id} name={m.firstName || m.email} />
+              </div>
+            )}
+            {m.status === "joined_network" && (
+              <div className="notes-block">
+                <p className="small muted">Have you added her to all five private spaces on Mighty Networks? Tick it here to finish.</p>
+                <SpacesButton id={m.id} name={m.firstName || m.email} />
               </div>
             )}
             <ol className="timeline">

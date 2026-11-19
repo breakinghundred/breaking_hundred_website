@@ -106,6 +106,7 @@ export function DashboardHelp({ isAdmin }: { isAdmin: boolean }) {
           <li>Under <b>Members</b>, find their name. Under their stage, click <b>Tick: joined the platform</b> (or open their details page and press <b>✓ She has joined the platform</b> in the <b>Journey</b> box).</li>
           <li>Read the pop-up and press <b>Yes, she has joined</b>. This also stops the &ldquo;please join&rdquo; reminder emails.</li>
           <li>They now appear in <b>Needs your attention</b> as &ldquo;Add [name] to the private spaces&rdquo;. Follow the steps below.</li>
+          <li>Once they are in all five spaces, click <b>Tick: joined spaces</b> under their stage (or <b>Spaces added</b> in Needs your attention; both do the same). Confirm with <b>Yes, all five</b>. Their welcome email goes out straight away.</li>
         </ol>
       </Part>
 
@@ -198,9 +199,10 @@ export function MemberHelp({ isAdmin }: { isAdmin: boolean }) {
         <ol>
           <li>Check on Mighty Networks that they are in <b>Start Here</b>.</li>
           <li>In the <b>Journey</b> box, press <b>✓ She has joined the platform</b>, then <b>Yes, she has joined</b>.</li>
-          <li>Add them to the five private spaces on Mighty Networks, then press <b>Spaces added</b> on the dashboard. That sends their welcome email.</li>
+          <li>Add them to the five private spaces on Mighty Networks.</li>
+          <li>Back in the <b>Journey</b> box, press <b>✓ She has joined the private spaces</b>, then <b>Yes, all five</b>. That sends their welcome email.</li>
         </ol>
-        <p>The button only shows for people who have paid but aren&apos;t marked as joined yet.</p>
+        <p>Each button only shows at its step: the first for people who have paid but aren&apos;t marked as joined, the second once they are marked as joined.</p>
       </Part>
       <Part title="They joined Mighty Networks with a different email">
         <ol>
