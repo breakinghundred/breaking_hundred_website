@@ -31,10 +31,10 @@ export async function startCheckout(token: string, _prev: PayState, formData: Fo
     const [product, price] = await Promise.all([membershipProduct(), getMembershipPrice()]);
     const item = { currency: product.currency, product: product.product, unit_amount: price.pence };
     const renewal = renewalDateFor(new Date());
-    const session = await stripe().checkout.sessions.create({
+    const create = (customer: string | null) => stripe().checkout.sessions.create({
       mode: "subscription",
       client_reference_id: member.id,
-      ...(member.stripeCustomerId ? { customer: member.stripeCustomerId } : { customer_email: member.email }),
+      ...(customer ? { customer } : { customer_email: member.email }),
       line_items: [
         // Next charge on the renewal date, at today's price…
         { price_data: { ...item, recurring: { interval: product.interval, interval_count: product.intervalCount } }, quantity: 1 },
@@ -55,10 +55,25 @@ export async function startCheckout(token: string, _prev: PayState, formData: Fo
         },
       },
     });
+    let session;
+    try {
+      session = await create(member.stripeCustomerId);
+    } catch (e) {
+      // A saved customer Stripe no longer has (e.g. made in test mode, or deleted): forget it and start fresh.
+      if (!member.stripeCustomerId || !isMissingCustomer(e)) throw e;
+      console.warn("Saved Stripe customer not found; starting checkout without it", member.stripeCustomerId);
+      await db().member.updateMany({ where: { id: member.id, stripeCustomerId: member.stripeCustomerId }, data: { stripeCustomerId: null } });
+      session = await create(null);
+    }
     url = session.url;
   } catch (e) {
     console.error("Checkout session failed", e);
   }
   if (!url) return { error: "We could not open the secure payment page. Please try again in a moment." };
   redirect(url);
+}
+
+function isMissingCustomer(e: unknown) {
+  const err = e as { code?: string; param?: string; message?: string };
+  return err?.code === "resource_missing" && (err.param === "customer" || /no such customer/i.test(err.message ?? ""));
 }
