@@ -265,8 +265,7 @@ skills, belief, and network to create lasting impact."
           </Reveal>
           <AnimatedHeading text="Register your interest." />
           <Reveal as="p" delay={0.1} className="muted">
-            Tell us who you are and we will email your personal payment link by
-            21 November, plus what to expect in your first month. Membership is{" "}
+            Tell us who you are and we will email your personal payment link, plus what to expect in your first month. Membership is{" "}
             <MembershipPriceText price={price} /> for 12 months.
           </Reveal>
           <JoinForm />
