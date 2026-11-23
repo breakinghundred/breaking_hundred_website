@@ -235,15 +235,15 @@ skills, belief, and network to create lasting impact."
               <div className="price" style={{ marginTop: 14 }}>
                 <MembershipPriceText price={price} /> <small>/ 12 months</small>
               </div>
-              <p className="price-was">Payment opens 21 November</p>
+              <p className="price-was">Payment opened 21 November</p>
             </div>
             <div style={{ maxWidth: 420, color: "#e9dce4" }}>
               <p style={{ margin: 0 }}>
                 <strong style={{ color: "#fff" }}>
                   Register your interest now.
                 </strong>{" "}
-                Your personal payment link arrives by 21 November, and we hold
-                an onboarding call in December.
+               If approved, your personal payment link will be sent. 
+               We will then hold an onboarding call thereafter.
               </p>
               <p style={{ margin: "14px 0 0" }}>
                 One fee, everything included. No joining fee, and you can cancel
