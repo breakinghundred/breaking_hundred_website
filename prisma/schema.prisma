@@ -99,6 +99,7 @@ model Member {
 
   emails               EmailLog[]
   manualPayments       ManualPayment[]
+  stageChanges         StageChange[]
 
   @@index([status])
 }
@@ -260,6 +261,23 @@ model ManualPayment {
   /// The drawn signature, as a PNG.
   signature   Bytes
   createdAt   DateTime @default(now())
+
+  @@index([memberId])
+}
+
+/// A stage (Member.status) changed by hand in /admin ("Change stage"), forwards or backwards.
+/// Records only: no emails, Stripe or Mighty Networks changes.
+model StageChange {
+  id         String       @id @default(cuid())
+  memberId   String?
+  member     Member?      @relation(fields: [memberId], references: [id], onDelete: SetNull)
+  fromStatus MemberStatus
+  toStatus   MemberStatus
+  reason     String
+  /// The signed-in admin (StaffUser id, or the main admin's fixed id).
+  staffId    String
+  staffEmail String
+  createdAt  DateTime     @default(now())
 
   @@index([memberId])
 }

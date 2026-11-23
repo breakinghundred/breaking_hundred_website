@@ -147,6 +147,27 @@ export async function afterPayment(member: Member, sendKey = "") {
   });
 }
 
+/* ---------- Stage changed by hand in /admin ---------- */
+
+/**
+ * An admin moves a member to any stage, forwards or backwards. Records only: it sends no
+ * emails and never touches Stripe or Mighty Networks. The claim is conditional on the stage
+ * the admin saw, so a webhook or another admin changing her meanwhile isn't overwritten.
+ */
+export async function changeStage(
+  memberId: string,
+  from: MemberStatus,
+  to: MemberStatus,
+  by: { staffId: string; staffEmail: string; reason: string },
+) {
+  if (from === to) throw new Error("Please choose a different stage from the one she is at now.");
+  await db().$transaction(async (tx) => {
+    const claimed = await tx.member.updateMany({ where: { id: memberId, status: from }, data: { status: to } });
+    if (claimed.count === 0) throw new Error("Please refresh the page: her stage has changed since you opened it.");
+    await tx.stageChange.create({ data: { memberId, fromStatus: from, toStatus: to, ...by } });
+  });
+}
+
 /* ---------- Payment status changed by the team in /admin ---------- */
 
 export type PaymentChange = "paid" | "unpaid" | "up_to_date" | "failed" | "ended";

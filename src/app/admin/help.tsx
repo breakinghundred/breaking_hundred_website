@@ -204,6 +204,18 @@ export function MemberHelp({ isAdmin }: { isAdmin: boolean }) {
         </ol>
         <p>Each button only shows at its step: the first for people who have paid but aren&apos;t marked as joined, the second once they are marked as joined.</p>
       </Part>
+      {isAdmin && (
+        <Part title="Moving them to a different stage by hand">
+          <ol>
+            <li>In the <b>Journey</b> box, click <b>Change stage</b> to open it.</li>
+            <li>Choose the stage they should be at. You can move them forwards or backwards.</li>
+            <li>Type a short reason, for example <i>Added to the wrong stage by mistake</i>.</li>
+            <li>Press <b>Change stage</b>, read the pop-up and confirm.</li>
+          </ol>
+          <p>This <b>sends no email</b> and changes nothing in Stripe or on Mighty Networks. It only changes the stage shown here and which automatic reminders apply to them from now on. Each change is listed under <b>Stage changed by hand</b> with who made it, when and why.</p>
+          <p>To record a payment or end a membership, use <b>Change payment status</b> in the Payment box instead, because that also sends the right emails and removes access.</p>
+        </Part>
+      )}
       <Part title="They joined Mighty Networks with a different email">
         <ol>
           <li>Ask them which email address they used on Mighty Networks.</li>

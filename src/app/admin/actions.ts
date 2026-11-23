@@ -5,12 +5,13 @@ import { checkPayments } from "@/lib/stripe";
 import { requireAdminAction, requireStaff } from "@/lib/staff";
 import { db } from "@/lib/db";
 import { runDailyJobs } from "@/lib/jobs";
-import { changePaymentStatus, completeSpaces, resendPaymentLink, resendPaymentLinks, grantSpaces, importInterest, markJoinedPlatform, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
+import { changePaymentStatus, changeStage, completeSpaces, resendPaymentLink, resendPaymentLinks, grantSpaces, importInterest, markJoinedPlatform, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
 import { SETTING_FIELDS, getMembershipPrice, saveSettings, type Settings } from "@/lib/settings";
 import { DEFAULT_PRICE_POUNDS, formatPounds, parsePounds } from "@/lib/price-format";
 import { pausedIds } from "@/lib/email/paused";
 import type { TemplateId } from "@/lib/email/templates";
-import { PAYMENT_CHANGE_EMAILS } from "./labels";
+import { PAYMENT_CHANGE_EMAILS, STAGES } from "./labels";
+import type { MemberStatus } from "@/generated/prisma/client";
 import { MAX_IMPORT_BYTES, readPeopleFile, type ImportResult } from "@/lib/import-file";
 
 export type AdminState = { message?: string; error?: string };
@@ -263,6 +264,21 @@ export async function paymentStatusAction(_prev: AdminState, formData: FormData)
       signedBy: { staffId: staff.id, staffEmail: staff.email, name: signedName, signature },
     });
     return paymentDone(change);
+  }, true);
+}
+
+export async function stageAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
+  return guarded(async () => {
+    const staff = await requireAdminAction();
+    const id = String(formData.get("id"));
+    const from = String(formData.get("from")) as MemberStatus;
+    const to = String(formData.get("to")) as MemberStatus;
+    if (!(from in STAGES) || !(to in STAGES)) throw new Error("Please choose the new stage.");
+    const reason = String(formData.get("reason") ?? "").trim().replace(/\s+/g, " ");
+    if (reason.length < 3) throw new Error("Please say briefly why you are changing her stage.");
+    if (reason.length > 300) throw new Error("Please shorten the reason to 300 characters or fewer.");
+    await changeStage(id, from, to, { staffId: staff.id, staffEmail: staff.email, reason });
+    return `Done. She is now at "${STAGES[to].label}". No email was sent.`;
   }, true);
 }
 

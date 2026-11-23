@@ -14,6 +14,7 @@ import { getMembershipPrice } from "@/lib/settings";
 import { pausedIds } from "@/lib/email/paused";
 import { ActionForm } from "../../ActionForm";
 import { PaymentStatusForm } from "../../PaymentStatusForm";
+import { StageForm } from "../../StageForm";
 import { JoinedButton, SpacesButton } from "../../JoinedButton";
 import { memberAction } from "../../actions";
 import { newDraftAction } from "../../emails/mail-actions";
@@ -49,7 +50,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
   const isAdmin = staff.role === "admin";
   const { id } = await params;
   const [m, price, paused] = await Promise.all([
-    db().member.findUnique({ where: { id }, include: { emails: { orderBy: { sentAt: "desc" } }, manualPayments: { orderBy: { createdAt: "desc" } } } }),
+    db().member.findUnique({ where: { id }, include: { emails: { orderBy: { sentAt: "desc" } }, manualPayments: { orderBy: { createdAt: "desc" } }, stageChanges: { orderBy: { createdAt: "desc" } } } }),
     getMembershipPrice(),
     pausedIds(),
   ]);
@@ -173,6 +174,29 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
                 <span className="muted small">{m.academyProgressPct}% complete</span>
               </li>
             </ol>
+            {m.stageChanges.length > 0 && (
+              <div className="notes-block">
+                <h3 className="notes-h">Stage changed by hand</h3>
+                <ul className="email-history">
+                  {m.stageChanges.map((c) => (
+                    <li key={c.id}>
+                      <b>
+                        {STAGES[c.fromStatus].label} → {STAGES[c.toStatus].label}
+                      </b>
+                      <span className="muted small">
+                        {c.staffEmail}, {when(c.createdAt)}: {c.reason}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {isAdmin && (
+              <details className="mini">
+                <summary>Change stage</summary>
+                <StageForm id={m.id} name={name || m.email} current={m.status} />
+              </details>
+            )}
           </div>
 
           <div className="detail-card">
