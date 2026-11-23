@@ -82,7 +82,7 @@ const faqs = (price: string) => [
   },
   {
     q: "When do I pay?",
-    a: `Register your interest below. Membership opens on 21 November, when we email you a personal link to pay ${price} for 12 months. It renews automatically each year and you can cancel online at any time before your renewal date.`,
+    a: `Register your interest below. Then we email you a personal link to pay ${price} for 12 months. It renews automatically each year and you can cancel online at any time before your renewal date.`,
   },
   {
     q: "How do I pay?",
