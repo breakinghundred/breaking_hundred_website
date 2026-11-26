@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useActionState, useMemo, useRef, useState, type ReactNode } from "react";
 import { MERGE_FIELDS, SAMPLE_VARS, validateCustom } from "@/lib/email/catalogue";
 import { isDesign, type DesignId } from "@/lib/email/designs";
 import { renderHtml } from "@/lib/email/render";
@@ -23,6 +23,7 @@ export function DraftEditor({
   logos,
   testTo,
   house,
+  attachments,
 }: {
   draft: Draft;
   contacts: Contact[];
@@ -30,6 +31,8 @@ export function DraftEditor({
   logos: Logo[];
   testTo: string;
   house: DesignId;
+  /** The attached files box (saved on its own, not with the draft). */
+  attachments: ReactNode;
 }) {
   const [state, action, pending] = useActionState<DraftState, FormData>(draftAction, {});
   const [subject, setSubject] = useState(draft.subject);
@@ -253,6 +256,8 @@ export function DraftEditor({
             </ul>
           )}
         </fieldset>
+
+        {attachments}
 
         <DesignPicker value={design} onChange={setDesign} house={house} />
 

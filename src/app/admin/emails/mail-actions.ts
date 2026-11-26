@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { MemberStatus, Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { SAMPLE_VARS, SENDABLE_TEMPLATE_IDS, validateCustom } from "@/lib/email/catalogue";
+import { loadAttachments } from "@/lib/email/attachments";
 import { draftDesign, saveHouseDesign, saveTemplateDesign } from "@/lib/email/design-store";
 import { isDesign } from "@/lib/email/designs";
 import { LOGO_MAX_BYTES, LOGO_MAX_WIDTH, LOGO_MIN_WIDTH, LOGO_TYPES, logosById } from "@/lib/email/logos";
@@ -92,7 +93,7 @@ export async function draftAction(_prev: DraftState, formData: FormData): Promis
     if (!EMAIL.test(to)) return { errors: ["Enter a valid email address for the test."], savedAt: Date.now() };
     const { subject, blocks } = compile(source, SAMPLE_VARS);
     try {
-      await sendPreview(to, subject, blocks, await logosById(data.logoIds), design);
+      await sendPreview(to, subject, blocks, await logosById(data.logoIds), design, await loadAttachments({ draftId: id }));
     } catch (e) {
       return { errors: [`The test could not be sent. ${e instanceof Error ? e.message : String(e)}`], savedAt: Date.now() };
     }
@@ -105,7 +106,8 @@ export async function draftAction(_prev: DraftState, formData: FormData): Promis
     const members = await db().member.findMany({ where, orderBy: { createdAt: "asc" } });
     if (!members.length) return { errors: ["Nobody matches the people you chose."], savedAt: Date.now() };
     try {
-      const { sent } = await sendCustomEmail(members, source, { logoIds: data.logoIds, design, sendKey: `${id}:${Date.now()}` });
+      const files = await loadAttachments({ draftId: id });
+      const { sent } = await sendCustomEmail(members, source, { logoIds: data.logoIds, design, files, sendKey: `${id}:${Date.now()}` });
       await db().emailDraft.update({ where: { id }, data: { lastSentAt: new Date(), sentCount: { increment: sent } } });
       revalidatePath("/admin", "layout");
       return { message: `Sent to ${sent} ${sent === 1 ? "person" : "people"}. You can find it on each person's details page.`, savedAt: Date.now() };
@@ -133,7 +135,12 @@ export async function sendToContactAction(_prev: AdminState, formData: FormData)
       if (!draft) return { error: "That draft has been deleted." };
       const problems = validateCustom(draft);
       if (problems.length) return { error: `That draft isn't ready: ${problems[0]}` };
-      await sendCustomEmail([member], draft, { logoIds: draft.logoIds, design: await draftDesign(draft.design), sendKey: `${draft.id}:${stamp}` });
+      await sendCustomEmail([member], draft, {
+        logoIds: draft.logoIds,
+        design: await draftDesign(draft.design),
+        files: await loadAttachments({ draftId: draft.id }),
+        sendKey: `${draft.id}:${stamp}`,
+      });
       await db().emailDraft.update({ where: { id: draft.id }, data: { lastSentAt: new Date(), sentCount: { increment: 1 } } });
     } else if (SENDABLE_TEMPLATE_IDS.includes(what as TemplateId)) {
       await sendMemberEmail(member, what as TemplateId, { sendKey: `manual-${stamp}`, force: true });

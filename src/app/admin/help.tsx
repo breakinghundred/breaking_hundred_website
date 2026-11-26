@@ -398,6 +398,7 @@ export function EmailEditorHelp() {
           <li>Check the <b>Preview</b> on the right. It uses a pretend member so you can see the finished email.</li>
           <li>To see it in a real inbox, type your email next to <b>Send test</b> and press it. This works before saving.</li>
           <li>To change how the email looks rather than what it says, pick a design under the text.</li>
+          <li>To send a file with every copy of this email (for example a welcome pack PDF), press <b>Attach a file</b> under <b>Attached files</b>. Each file can be up to 4 MB, and up to 10 MB all together. Files are kept straight away, without pressing Save, and go out with the next email sent. <b>Remove</b> takes a file off. Emails sent on a delay can&apos;t carry files, so the page says so instead; put a link to the file in the text.</li>
           <li>Press <b>Save changes</b>. If anything is wrong (an empty subject, a misspelt merge field), a red message explains it and saving waits until it&apos;s fixed. The button says <b>Saved</b> when there is nothing new to save.</li>
           <li><b>Reset to original</b> brings back the built-in wording. Your changes are lost, so the site asks first.</li>
         </ol>
@@ -439,13 +440,14 @@ export function DraftEditorHelp() {
           <li>Type a <b>Subject</b> and the email text.</li>
           <li>To greet everyone by name, click where you want the name, then click <code>{"{{first_name}}"}</code> in the <b>Merge fields</b> list on the right.</li>
           <li>Tick the logos you want at the top, and pick a design if you want something other than the house look.</li>
+          <li>To send a file with it (a PDF, a Word document, a picture), press <b>Attach a file</b> under <b>Attached files</b> and choose it. You can pick several at once. Each file can be up to 4 MB, and up to 10 MB all together. Files are kept as soon as you add them, without pressing Save. Click a file&apos;s name to check it, or <b>Remove</b> to take it off.</li>
           <li>Press <b>Save draft</b> to keep it and come back later.</li>
         </ol>
         <FormatTips />
       </Part>
       <Part title="3. Check, then send">
         <ol>
-          <li>Type your own email next to <b>Send test</b> and press it. Check the email in your inbox, on your phone too if you can.</li>
+          <li>Type your own email next to <b>Send test</b> and press it. Check the email in your inbox, on your phone too if you can. The test carries the attached files too, so you can open them.</li>
           <li>Press <b>Send to …</b> (the button shows how many people). A pop-up asks you to check. Press the button in the pop-up to confirm.</li>
           <li>Sent emails can&apos;t be recalled, so check the recipients carefully.</li>
         </ol>

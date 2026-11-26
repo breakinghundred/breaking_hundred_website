@@ -1,7 +1,8 @@
 import "server-only";
-import { Resend } from "resend";
+import { Resend, type Attachment } from "resend";
 import type { Member } from "@/generated/prisma/client";
 import { Prisma } from "@/generated/prisma/client";
+import { automatedAttachments } from "./attachments";
 import { db } from "../db";
 import { optionalEnv } from "../env";
 import { getSettings } from "../settings";
@@ -25,19 +26,34 @@ function resend() {
 const FROM = () => optionalEnv("EMAIL_FROM") ?? "Breaking Hundred <circle@breakinghundred.org>";
 const REPLY_TO = () => optionalEnv("EMAIL_REPLY_TO") ?? "admin@breakinghundred.org";
 
-type Raw = { to: string; subject: string; blocks: Block[]; logos?: EmailLogos; design?: DesignId; scheduledAt?: Date; idempotencyKey?: string };
+type Raw = {
+  to: string;
+  subject: string;
+  blocks: Block[];
+  logos?: EmailLogos;
+  /** Files sent with the email (see attachments.ts). */
+  files?: Attachment[];
+  design?: DesignId;
+  scheduledAt?: Date;
+  idempotencyKey?: string;
+};
 
 /** Resend won't schedule an email with attachments, so a scheduled email drops inline (cid:) logos. */
 const forSend = (logos: EmailLogos, scheduled: boolean) => (scheduled && logos.attachments.length ? NO_LOGOS : logos);
 
 /** Low-level send. Without RESEND_API_KEY in development, prints the email instead. */
-async function deliver({ to, subject, blocks, logos: chosen = NO_LOGOS, design, scheduledAt, idempotencyKey }: Raw): Promise<string | null> {
+async function deliver({ to, subject, blocks, logos: chosen = NO_LOGOS, files: chosenFiles = [], design, scheduledAt, idempotencyKey }: Raw): Promise<string | null> {
   const r = resend();
   const scheduled = !!scheduledAt && scheduledAt.getTime() > Date.now() + 30_000;
   const logos = forSend(chosen, scheduled);
+  // Delayed emails can't be given files in /admin (DELAYED_TEMPLATES); this only guards against a slip.
+  if (scheduled && chosenFiles.length) console.warn(`[email] "${subject}" is scheduled, so its ${chosenFiles.length} attached file(s) were left off`);
+  const files = scheduled ? [] : chosenFiles;
+  const attachments = [...logos.attachments, ...files];
   if (!r) {
     if (process.env.NODE_ENV === "production") throw new Error("RESEND_API_KEY is not set");
-    console.info(`\n[email:dev] to=${to}${scheduledAt ? ` at=${scheduledAt.toISOString()}` : ""}\nSubject: ${subject}\n\n${renderText(blocks)}\n`);
+    const attached = files.length ? `\nAttached: ${files.map((f) => f.filename).join(", ")}` : "";
+    console.info(`\n[email:dev] to=${to}${scheduledAt ? ` at=${scheduledAt.toISOString()}` : ""}\nSubject: ${subject}${attached}\n\n${renderText(blocks)}\n`);
     return null;
   }
   const { data, error } = await r.emails.send(
@@ -48,7 +64,7 @@ async function deliver({ to, subject, blocks, logos: chosen = NO_LOGOS, design, 
       subject,
       html: renderHtml(blocks, logos.refs, design),
       text: renderText(blocks),
-      ...(logos.attachments.length ? { attachments: logos.attachments } : {}),
+      ...(attachments.length ? { attachments } : {}),
       ...(scheduled ? { scheduledAt: scheduledAt!.toISOString() } : {}),
     },
     idempotencyKey ? { idempotencyKey } : undefined,
@@ -88,12 +104,13 @@ export async function sendMemberEmail(
     const settings = await getSettings();
     const vars = { ...memberVars(member, settings), ...opts.vars };
     const { subject, blocks } = compile(await getSource(templateId), vars);
-    const [logos, design] = await Promise.all([automatedLogos(), designFor(templateId)]);
+    const [logos, design, files] = await Promise.all([automatedLogos(), designFor(templateId), automatedAttachments(templateId)]);
     const resendId = await deliver({
       to: member.email,
       subject,
       blocks,
       logos,
+      files,
       design,
       scheduledAt: opts.scheduledAt,
       idempotencyKey: `${member.id}:${templateId}:${sendKey}`.slice(0, 256),
@@ -108,8 +125,8 @@ export async function sendMemberEmail(
 }
 
 /** Test send of a template from /admin, with sample values. Not logged. */
-export async function sendPreview(to: string, subject: string, blocks: Block[], logos?: EmailLogos, design?: DesignId) {
-  await deliver({ to, subject: `[Test] ${subject}`, blocks, logos: logos ?? (await automatedLogos()), design: design ?? (await designChoices()).house });
+export async function sendPreview(to: string, subject: string, blocks: Block[], logos?: EmailLogos, design?: DesignId, files?: Attachment[]) {
+  await deliver({ to, subject: `[Test] ${subject}`, blocks, logos: logos ?? (await automatedLogos()), files, design: design ?? (await designChoices()).house });
 }
 
 /**
@@ -117,14 +134,14 @@ export async function sendPreview(to: string, subject: string, blocks: Block[], 
  * doesn't hit the per-second rate limit. Not logged. Returns false when email isn't
  * set up and the emails were printed to the server log instead (development only).
  */
-export async function sendPreviews(to: string, emails: { subject: string; blocks: Block[]; design?: DesignId }[]): Promise<boolean> {
+export async function sendPreviews(to: string, emails: { subject: string; blocks: Block[]; design?: DesignId; files?: Attachment[] }[]): Promise<boolean> {
   const r = resend();
   const [logos, { house }] = await Promise.all([automatedLogos(), designChoices()]);
-  if (!r || logos.attachments.length) {
-    // The batch API can't carry attachments, so inline logos go one at a time.
+  if (!r || logos.attachments.length || emails.some((e) => e.files?.length)) {
+    // The batch API can't carry attachments, so inline logos and files go one at a time.
     for (const [n, e] of emails.entries()) {
       if (r && n) await pause();
-      await deliver({ to, subject: `[Test] ${e.subject}`, blocks: e.blocks, logos, design: e.design ?? house });
+      await deliver({ to, subject: `[Test] ${e.subject}`, blocks: e.blocks, logos, files: e.files, design: e.design ?? house });
     }
     return !!r;
   }
@@ -158,10 +175,11 @@ export const CUSTOM_EMAIL = "custom";
 export async function sendCustomEmail(
   members: Member[],
   source: Source,
-  opts: { logoIds: string[]; sendKey: string; design: DesignId },
+  opts: { logoIds: string[]; sendKey: string; design: DesignId; files?: Attachment[] },
 ): Promise<{ sent: number; skipped: number }> {
   if (!members.length) return { sent: 0, skipped: 0 };
   const [settings, logos] = await Promise.all([getSettings(), logosById(opts.logoIds)]);
+  const files = opts.files ?? [];
   const r = resend();
   if (!r && process.env.NODE_ENV === "production") throw new Error("RESEND_API_KEY is not set");
   let sent = 0;
@@ -190,11 +208,11 @@ export async function sendCustomEmail(
 
     const done = new Set<string>();
     try {
-      if (!r || logos.attachments.length) {
-        // One at a time: without Resend (development), or with inline logos, which the batch API can't carry.
+      if (!r || logos.attachments.length || files.length) {
+        // One at a time: without Resend (development), or with inline logos or files, which the batch API can't carry.
         for (const [n, c] of claimed.entries()) {
           if (r && n) await pause();
-          const id = await deliver({ to: c.member.email, subject: c.subject, blocks: c.blocks, logos, design: opts.design, idempotencyKey: `${opts.sendKey}:${c.member.id}`.slice(0, 256) });
+          const id = await deliver({ to: c.member.email, subject: c.subject, blocks: c.blocks, logos, files, design: opts.design, idempotencyKey: `${opts.sendKey}:${c.member.id}`.slice(0, 256) });
           done.add(c.logId);
           sent++;
           if (id) await db().emailLog.update({ where: { id: c.logId }, data: { resendId: id } });

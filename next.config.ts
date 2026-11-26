@@ -3,8 +3,9 @@ import { withBotId } from "botid/next/config";
 
 const nextConfig: NextConfig = {
   experimental: {
-    // Logo uploads in /admin/emails/logos (up to 2 MB each).
-    serverActions: { bodySizeLimit: "3mb" },
+    // Logo uploads (up to 2 MB) and email attachments (up to 4 MB, one per request).
+    // Vercel caps request bodies at 4.5 MB, so this can't go higher.
+    serverActions: { bodySizeLimit: "4.5mb" },
   },
   images: {
     // YouTube thumbnails for the lazy video facades on the annual event page.

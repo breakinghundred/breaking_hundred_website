@@ -3,10 +3,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/lib/staff";
 import { TEMPLATE_IDS, TEMPLATE_INFO } from "@/lib/email/catalogue";
+import {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_KINDS_LABEL,
+  ATTACHMENT_MAX_BYTES,
+  DELAYED_TEMPLATES,
+  formatBytes,
+  listAttachments,
+} from "@/lib/email/attachments";
 import { designChoices } from "@/lib/email/design-store";
 import { listLogos, logoPath } from "@/lib/email/logos";
 import { getSource } from "@/lib/email/store";
 import type { TemplateId } from "@/lib/email/templates";
+import { Attachments } from "../Attachments";
 import { Editor } from "./Editor";
 import { EmailEditorHelp } from "../../help";
 
@@ -17,7 +26,7 @@ export default async function EditEmailPage({ params }: { params: Promise<{ id: 
   const { id: raw } = await params;
   const id = raw.toUpperCase() as TemplateId;
   if (!TEMPLATE_IDS.includes(id)) notFound();
-  const [source, designs] = await Promise.all([getSource(id), designChoices()]);
+  const [source, designs, files] = await Promise.all([getSource(id), designChoices(), listAttachments({ templateId: id })]);
   // The same logos the automated emails carry. If they can't be loaded, show none (sending does the same).
   const logos = (await listLogos().catch(() => []))
     .filter((l) => l.inAutomated)
@@ -34,7 +43,29 @@ export default async function EditEmailPage({ params }: { params: Promise<{ id: 
           {source.edited ? `Edited wording, last saved ${source.updatedAt!.toLocaleString("en-GB")}.` : "Original wording."}
         </p>
         <EmailEditorHelp />
-        <Editor id={id} subject={source.subject} body={source.body} edited={source.edited} logos={logos} design={designs.templates[id] ?? ""} house={designs.house} />
+        <Editor
+          id={id}
+          subject={source.subject}
+          body={source.body}
+          edited={source.edited}
+          logos={logos}
+          design={designs.templates[id] ?? ""}
+          house={designs.house}
+          attachments={
+            <Attachments
+              owner={`template:${id}`}
+              files={files.map((f) => ({ id: f.id, filename: f.filename, size: formatBytes(f.size) }))}
+              accept={ATTACHMENT_ACCEPT}
+              kinds={ATTACHMENT_KINDS_LABEL}
+              maxLabel={formatBytes(ATTACHMENT_MAX_BYTES)}
+              blocked={
+                DELAYED_TEMPLATES.includes(id)
+                  ? "This email is sent on a delay, and delayed emails can't carry files. To share a file, put a link to it in the text."
+                  : undefined
+              }
+            />
+          }
+        />
       </div>
     </section>
   );

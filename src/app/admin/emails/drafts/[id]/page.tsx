@@ -3,11 +3,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatDate } from "@/lib/dates";
+import {
+  ATTACHMENT_ACCEPT,
+  ATTACHMENT_KINDS_LABEL,
+  ATTACHMENT_MAX_BYTES,
+  formatBytes,
+  listAttachments,
+} from "@/lib/email/attachments";
 import { designChoices } from "@/lib/email/design-store";
 import { listLogos, logoPath } from "@/lib/email/logos";
 import { senderDetails } from "@/lib/email/send";
 import { requireAdminPage } from "@/lib/staff";
 import { STAGES, STAGE_ORDER } from "../../../labels";
+import { Attachments } from "../../Attachments";
 import { DraftEditor } from "./DraftEditor";
 import { DraftEditorHelp } from "../../../help";
 
@@ -18,13 +26,14 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const draft = await db().emailDraft.findUnique({ where: { id } });
   if (!draft) notFound();
-  const [contacts, logos, designs] = await Promise.all([
+  const [contacts, logos, designs, files] = await Promise.all([
     db().member.findMany({
       select: { id: true, firstName: true, lastName: true, email: true, status: true },
       orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
     }),
     listLogos(),
     designChoices(),
+    listAttachments({ draftId: draft.id }),
   ]);
   const sender = senderDetails();
 
@@ -62,6 +71,15 @@ export default async function DraftPage({ params }: { params: Promise<{ id: stri
           logos={logos.map((l) => ({ id: l.id, name: l.name, width: l.width, src: logoPath(l.id) }))}
           testTo={staff.email}
           house={designs.house}
+          attachments={
+            <Attachments
+              owner={`draft:${draft.id}`}
+              files={files.map((f) => ({ id: f.id, filename: f.filename, size: formatBytes(f.size) }))}
+              accept={ATTACHMENT_ACCEPT}
+              kinds={ATTACHMENT_KINDS_LABEL}
+              maxLabel={formatBytes(ATTACHMENT_MAX_BYTES)}
+            />
+          }
         />
       </div>
     </section>

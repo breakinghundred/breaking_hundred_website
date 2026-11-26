@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useActionState, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   EXTRA_FIELD_INFO,
   MERGE_FIELDS,
@@ -26,6 +26,7 @@ export function Editor({
   logos,
   design: savedDesign,
   house,
+  attachments,
 }: {
   id: TemplateId;
   subject: string;
@@ -35,6 +36,8 @@ export function Editor({
   /** This email's own design, or "" for the house design. */
   design: string;
   house: DesignId;
+  /** The attached files box (saved on its own, not with the wording). */
+  attachments: ReactNode;
 }) {
   const [state, action, pending] = useActionState<EditorState, FormData>(editorAction, {});
   const [subject, setSubject] = useState(savedSubject);
@@ -137,6 +140,8 @@ export function Editor({
             <li>Links are made clickable automatically. A line whose merge fields are all empty is left out.</li>
           </ul>
         </details>
+
+        {attachments}
 
         <DesignPicker value={design} onChange={setDesign} house={house} />
 

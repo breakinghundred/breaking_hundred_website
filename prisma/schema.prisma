@@ -225,6 +225,25 @@ model EmailDraft {
   sentCount    Int       @default(0)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  attachments  EmailAttachment[]
+}
+
+/// A file sent with an email: either a team-written draft (draftId) or an automated email (templateId, e.g. "C04").
+model EmailAttachment {
+  id          String      @id @default(cuid())
+  draftId     String?
+  draft       EmailDraft? @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  templateId  String?
+  /// The file name people see in their inbox.
+  filename    String
+  contentType String
+  size        Int
+  data        Bytes
+  createdBy   String?
+  createdAt   DateTime    @default(now())
+
+  @@index([draftId])
+  @@index([templateId])
 }
 
 /// A logo uploaded in /admin/emails/logos. Served publicly at /email-logo/<id>.

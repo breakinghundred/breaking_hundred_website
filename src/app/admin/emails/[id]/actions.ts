@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { ADMIN_ONLY, requireStaff } from "@/lib/staff";
 import { SAMPLE_VARS, TEMPLATE_IDS } from "@/lib/email/catalogue";
+import { loadAttachments } from "@/lib/email/attachments";
 import { sendPreview } from "@/lib/email/send";
 import { compile } from "@/lib/email/source";
 import { designChoices, saveTemplateDesign } from "@/lib/email/design-store";
@@ -42,7 +43,7 @@ export async function editorAction(_prev: EditorState, formData: FormData): Prom
     if (!to.includes("@")) return { errors: ["Enter an email address for the test."] };
     const { subject, blocks } = compile(source, SAMPLE_VARS);
     try {
-      await sendPreview(to, subject, blocks, undefined, own ?? (await designChoices()).house);
+      await sendPreview(to, subject, blocks, undefined, own ?? (await designChoices()).house, await loadAttachments({ templateId: id }));
     } catch (e) {
       return { errors: [`Test email failed: ${e instanceof Error ? e.message : String(e)}`] };
     }

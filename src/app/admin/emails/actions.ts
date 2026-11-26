@@ -1,6 +1,7 @@
 "use server";
 
 import { SAMPLE_VARS, TEMPLATE_IDS, TEMPLATE_INFO } from "@/lib/email/catalogue";
+import { automatedAttachments } from "@/lib/email/attachments";
 import { sendPreviews, sendTeamEmail, senderDetails } from "@/lib/email/send";
 import { compile } from "@/lib/email/source";
 import { getSource } from "@/lib/email/store";
@@ -44,7 +45,9 @@ export async function testEmailsAction(_prev: AdminState, formData: FormData): P
 
     const ids: TemplateId[] = which === "all" ? TEMPLATE_IDS : TEMPLATE_IDS.filter((id) => id === which);
     if (!ids.length) return { error: "Choose which email to send." };
-    const emails = await Promise.all(ids.map(async (id) => compile(await getSource(id), SAMPLE_VARS)));
+    const emails = await Promise.all(
+      ids.map(async (id) => ({ ...compile(await getSource(id), SAMPLE_VARS), files: await automatedAttachments(id) })),
+    );
     const delivered = await sendPreviews(to, emails);
     const what = ids.length === 1 ? `“${TEMPLATE_INFO[ids[0]].name}”` : `all ${ids.length} member emails`;
     if (!delivered) return { message: `Email is not set up here, so ${what} ${ids.length === 1 ? "was" : "were"} printed in the server log instead.` };
