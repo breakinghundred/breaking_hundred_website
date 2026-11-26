@@ -9,6 +9,8 @@ import { countryName } from "@/lib/countries";
 import { mightyConfigured } from "@/lib/mighty";
 import { checkPayments } from "@/lib/stripe";
 import { ActionForm } from "./ActionForm";
+import { SortSelect } from "./SortSelect";
+import { MEMBER_SORTS, PAGE_SIZE, isMemberSort, type MemberSort } from "./member-list";
 import { JoinedButton, SpacesButton } from "./JoinedButton";
 import { signOut } from "./login/actions";
 import { ALERT_TITLES, STAGES, STAGE_ORDER, billingLabel, plain } from "./labels";
@@ -23,11 +25,38 @@ export const metadata: Metadata = { title: "Circle dashboard", robots: { index: 
 
 const PAYING = new Set<MemberStatus>(["paid", "invited", "joined_network", "in_circle", "academy_complete"]);
 
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ status?: string; flag?: string; q?: string; deleted?: string }> }) {
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ status?: string; flag?: string; q?: string; sort?: string; page?: string; deleted?: string }> }) {
   const staff = await requireStaff();
   const isAdmin = staff.role === "admin";
-  const { status, flag, q, deleted } = await searchParams;
+  const { status, flag, q, sort: sortRaw, page: pageRaw, deleted } = await searchParams;
   const filterStatus = STAGE_ORDER.includes(status as MemberStatus) ? (status as MemberStatus) : undefined;
+  const sort: MemberSort = isMemberSort(sortRaw) ? sortRaw : "recent";
+  const requestedPage = Math.max(1, Math.floor(Number(pageRaw)) || 1);
+  // Builds a dashboard link that keeps the current filter, search and sort unless overridden.
+  const listHref = (over: { status?: string; flag?: string; q?: string; sort?: string; page?: number }) => {
+    const v = { status: filterStatus, flag: flag ? "1" : undefined, q, sort: sort === "recent" ? undefined : sort, page: undefined as number | undefined, ...over };
+    const qs = new URLSearchParams();
+    for (const [k, val] of Object.entries(v)) if (val && !(k === "page" && val === 1)) qs.set(k, String(val));
+    const str = qs.toString();
+    return str ? `/admin?${str}#members` : "/admin#members";
+  };
+  const memberWhere = {
+    ...(filterStatus ? { status: filterStatus } : {}),
+    ...(flag ? { followUpFlag: true } : {}),
+    ...(q
+      ? {
+          OR: [
+            { email: { contains: q.toLowerCase() } },
+            { firstName: { contains: q, mode: "insensitive" as const } },
+            { lastName: { contains: q, mode: "insensitive" as const } },
+            { phone: { contains: q } },
+          ],
+        }
+      : {}),
+  };
+  const matching = await db().member.count({ where: memberWhere });
+  const pages = Math.max(1, Math.ceil(matching / PAGE_SIZE));
+  const page = Math.min(requestedPage, pages);
   const auto = mightyConfigured();
 
   const [counts, alerts, needSpaces, flagged, members, jobs, payments] = await Promise.all([
@@ -36,22 +65,10 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     db().member.findMany({ where: { status: "joined_network" }, orderBy: { mnJoinedAt: "asc" }, take: 50 }),
     db().member.findMany({ where: { followUpFlag: true }, orderBy: { updatedAt: "desc" }, take: 50 }),
     db().member.findMany({
-      where: {
-        ...(filterStatus ? { status: filterStatus } : {}),
-        ...(flag ? { followUpFlag: true } : {}),
-        ...(q
-          ? {
-              OR: [
-                { email: { contains: q.toLowerCase() } },
-                { firstName: { contains: q, mode: "insensitive" } },
-                { lastName: { contains: q, mode: "insensitive" } },
-                { phone: { contains: q } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: { updatedAt: "desc" },
-      take: 300,
+      where: memberWhere,
+      orderBy: MEMBER_SORTS[sort].orderBy,
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
     }),
     db().jobRun.findMany({ orderBy: { startedAt: "desc" }, take: 1 }),
     checkPayments(),
@@ -238,31 +255,33 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         )}
 
         {/* Members */}
-        <h2 className="admin-h">Members</h2>
+        <h2 className="admin-h" id="members">Members</h2>
         <nav className="admin-pills" aria-label="Show members by stage">
-          <Link href="/admin" className={!filterStatus && !flag ? "on" : ""}>
+          <Link href={listHref({ status: undefined, flag: undefined })} className={!filterStatus && !flag ? "on" : ""}>
             Everyone <b>{total}</b>
           </Link>
           {STAGE_ORDER.map((s) => (
-            <Link key={s} href={`/admin?status=${s}`} className={filterStatus === s ? "on" : ""} title={STAGES[s].help}>
+            <Link key={s} href={listHref({ status: s, flag: undefined })} className={filterStatus === s ? "on" : ""} title={STAGES[s].help}>
               {STAGES[s].label} <b>{count(s)}</b>
             </Link>
           ))}
-          <Link href="/admin?flag=1" className={flag ? "on" : ""}>
+          <Link href={listHref({ status: undefined, flag: "1" })} className={flag ? "on" : ""}>
             To follow up <b>{flagged.length}</b>
           </Link>
         </nav>
         {filterStatus && <p className="muted small">{STAGES[filterStatus].help}</p>}
 
-        <form className="admin-search" role="search">
+        <form className="admin-search" role="search" action="/admin#members">
           {filterStatus && <input type="hidden" name="status" value={filterStatus} />}
+          {flag && <input type="hidden" name="flag" value="1" />}
           <input name="q" placeholder="Search by name, email or phone" defaultValue={q} aria-label="Search members" />
           <button className="button small" type="submit"><span>Search</span></button>
           {q && (
-            <Link href={filterStatus ? `/admin?status=${filterStatus}` : "/admin"} className="small">
+            <Link href={listHref({ q: undefined })} className="small">
               Clear
             </Link>
           )}
+          <SortSelect value={sort} />
         </form>
 
         {members.length === 0 ? (
@@ -273,7 +292,11 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <table className="admin-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
+                    <th aria-sort={sort === "name" ? "ascending" : sort === "name_desc" ? "descending" : undefined}>
+                      <Link href={listHref({ sort: sort === "name" ? "name_desc" : "name" })} className="sort-link" title="Sort by name">
+                        Name {sort === "name" ? "▲" : sort === "name_desc" ? "▼" : "↕"}
+                      </Link>
+                    </th>
                     <th>Stage</th>
                     <th>Signed up</th>
                     <th>Paid</th>
@@ -315,6 +338,16 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                 </li>
               ))}
             </ul>
+
+            <nav className="pager" aria-label="Members pages">
+              {page > 1 ? <Link href={listHref({ page: page - 1 })} className="button small outline"><span>← Previous</span></Link> : <span />}
+              <span className="small muted">
+                {matching <= PAGE_SIZE
+                  ? `${matching} ${matching === 1 ? "person" : "people"}`
+                  : `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, matching)} of ${matching} people · Page ${page} of ${pages}`}
+              </span>
+              {page < pages ? <Link href={listHref({ page: page + 1 })} className="button small outline"><span>Next →</span></Link> : <span />}
+            </nav>
           </>
         )}
 

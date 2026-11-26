@@ -127,6 +127,8 @@ export function DashboardHelp({ isAdmin }: { isAdmin: boolean }) {
         <ol>
           <li>Under <b>Members</b>, click one of the rounded buttons to show only people at that stage, for example <b>Payment link sent</b>. The number on each button is how many people are at that stage. Click <b>Everyone</b> to show all again.</li>
           <li>Or type part of their name, email address or phone number into the search box and press <b>Search</b>. Press <b>Clear</b> to go back.</li>
+          <li>To put the list in alphabetical order, choose <b>Name (A to Z)</b> from <b>Sort by</b> next to the search box, or click the <b>Name</b> heading at the top of the table. Click the heading again for Z to A. You can also sort by newest or oldest sign-ups. <b>Recently updated</b> is the usual order.</li>
+          <li>The list shows 25 people at a time. Use <b>Next →</b> and <b>← Previous</b> under the list to see the rest. Your stage, search and sort choice stay as you move between pages.</li>
           <li>Click a person&apos;s name (or <b>View details</b> on a phone) to open their full page with payments, emails sent and notes.</li>
         </ol>
       </Part>
