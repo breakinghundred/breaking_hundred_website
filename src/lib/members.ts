@@ -4,6 +4,7 @@ import { raiseAlert } from "./alerts";
 import { db } from "./db";
 import { DAY, renewalDateFor } from "./dates";
 import { cancelScheduledEmails, sendMemberEmail } from "./email/send";
+import { stripe } from "./stripe";
 import {
   addToPrivateSpaces,
   findMemberByEmail,
@@ -466,18 +467,31 @@ const LIVE_BILLING = new Set(["active", "payment_failed"]);
 /**
  * Permanently delete a member. Her email history goes with her (it holds her address);
  * hand-recorded payments and stage changes are kept as the team's audit trail, unlinked
- * (onDelete: SetNull). Emails still waiting to go out are cancelled in Resend.
- * Refused while a Stripe subscription can still charge her, and nothing changes on
- * Stripe or Mighty Networks.
+ * (onDelete: SetNull). Emails still waiting to go out are cancelled in Resend. A Stripe
+ * subscription that could still charge her is cancelled first (immediately, no refund),
+ * so she is never billed after we forget her. Nothing changes on Mighty Networks.
  */
+/** Cancel a subscription now. One Stripe has already cancelled or can't find counts as done. */
+async function cancelStripeSubscription(subscriptionId: string) {
+  try {
+    await stripe().subscriptions.cancel(subscriptionId);
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    if (code === "resource_missing") return;
+    try {
+      if ((await stripe().subscriptions.retrieve(subscriptionId)).status === "canceled") return;
+    } catch {}
+    console.error(`[stripe] could not cancel subscription ${subscriptionId}`, e);
+    throw new Error("Please try again in a minute: we couldn't cancel her membership in Stripe, so she has not been deleted.");
+  }
+}
+
 export async function deleteMember(id: string, confirmEmail: string, by: { staffId: string; staffEmail: string }) {
   const m = await db().member.findUnique({ where: { id } });
   if (!m) throw new Error("Please refresh the page: this person has already been deleted.");
   if (normaliseEmail(confirmEmail) !== m.email) throw new Error("Please type her email address exactly as shown to confirm.");
   if (m.stripeSubscriptionId && m.subscriptionStatus && LIVE_BILLING.has(m.subscriptionStatus)) {
-    throw new Error(
-      "Please cancel her membership in Stripe first (use View her membership in Stripe in the Payment box), then wait a minute and try again. Otherwise Stripe would keep charging her.",
-    );
+    await cancelStripeSubscription(m.stripeSubscriptionId);
   }
 
   const now = new Date();

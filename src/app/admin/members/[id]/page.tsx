@@ -299,7 +299,13 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
               </p>
               <details className="mini">
                 <summary>Delete this person</summary>
-                <DeleteMemberForm id={m.id} name={name || m.email} email={m.email} paid={paid || !!m.mnJoinedAt} />
+                <DeleteMemberForm
+                  id={m.id}
+                  name={name || m.email}
+                  email={m.email}
+                  mighty={!!m.mnJoinedAt}
+                  stripeLive={!!m.stripeSubscriptionId && (m.subscriptionStatus === "active" || m.subscriptionStatus === "payment_failed")}
+                />
               </details>
             </div>
           )}

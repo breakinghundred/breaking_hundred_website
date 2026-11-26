@@ -235,7 +235,7 @@ export function MemberHelp({ isAdmin }: { isAdmin: boolean }) {
             <li>You go back to the dashboard, which says they have been deleted.</li>
           </ol>
           <p><b>This cannot be undone.</b> Their registration, payment details, notes and email history are removed, and any emails still waiting to go out to them are stopped. Payments recorded by hand and stage changes stay in the records.</p>
-          <p>If they still have a card membership running in Stripe, the site will ask you to cancel it in Stripe first (use <b>View her membership in Stripe ↗</b> in the Payment box), so they are not charged again. Deleting changes nothing on Mighty Networks, so remove them there yourself if they had joined.</p>
+          <p>If they still have a card membership running in Stripe, deleting them cancels it in Stripe straight away, so they are not charged again. Nothing is refunded: do that in Stripe if needed. Deleting changes nothing on Mighty Networks, so remove them there yourself if they had joined.</p>
         </Part>
       )}
     </PageHelp>

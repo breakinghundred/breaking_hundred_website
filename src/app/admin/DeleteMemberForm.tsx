@@ -5,7 +5,7 @@ import { deleteMemberAction } from "./actions";
 import { useConfirmSubmit } from "./ConfirmDialog";
 
 /** "Delete this person" (admins only). She must type the member's email to unlock the button. */
-export function DeleteMemberForm({ id, name, email, paid }: { id: string; name: string; email: string; paid: boolean }) {
+export function DeleteMemberForm({ id, name, email, mighty, stripeLive }: { id: string; name: string; email: string; mighty: boolean; stripeLive: boolean }) {
   const [state, formAction, pending] = useActionState(deleteMemberAction, {});
   const [typed, setTyped] = useState("");
   const [guard, dialog] = useConfirmSubmit();
@@ -23,7 +23,8 @@ export function DeleteMemberForm({ id, name, email, paid }: { id: string; name: 
           message: [
             "Her registration, payment details, notes and email history will be removed from the site. This cannot be undone.",
             "Emails waiting to go out to her are stopped. Payments recorded by hand and stage changes are kept for the team's records.",
-            ...(paid ? ["Nothing changes in Stripe or on Mighty Networks: remove her there yourself if needed."] : []),
+            ...(stripeLive ? ["Her card membership in Stripe will be cancelled now, so she is not charged again. Nothing is refunded."] : []),
+            ...(mighty ? ["Nothing changes on Mighty Networks: remove her there yourself."] : []),
           ],
           confirmLabel: "Delete for good",
           danger: true,
