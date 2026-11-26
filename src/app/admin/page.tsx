@@ -23,10 +23,10 @@ export const metadata: Metadata = { title: "Circle dashboard", robots: { index: 
 
 const PAYING = new Set<MemberStatus>(["paid", "invited", "joined_network", "in_circle", "academy_complete"]);
 
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ status?: string; flag?: string; q?: string }> }) {
+export default async function AdminPage({ searchParams }: { searchParams: Promise<{ status?: string; flag?: string; q?: string; deleted?: string }> }) {
   const staff = await requireStaff();
   const isAdmin = staff.role === "admin";
-  const { status, flag, q } = await searchParams;
+  const { status, flag, q, deleted } = await searchParams;
   const filterStatus = STAGE_ORDER.includes(status as MemberStatus) ? (status as MemberStatus) : undefined;
   const auto = mightyConfigured();
 
@@ -88,6 +88,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         </header>
 
         <DashboardHelp isAdmin={isAdmin} />
+
+        {deleted && (
+          <p className="admin-msg ok" role="status">
+            The person has been deleted.
+            {deleted === "unsent" && " One or more emails that were waiting to go out to her could not be stopped. Please tell your developer."}
+          </p>
+        )}
 
         {!payments.ok && (
           <p className="warn small">

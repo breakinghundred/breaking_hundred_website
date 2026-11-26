@@ -1,11 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { checkPayments } from "@/lib/stripe";
 import { requireAdminAction, requireStaff } from "@/lib/staff";
 import { db } from "@/lib/db";
 import { runDailyJobs } from "@/lib/jobs";
-import { changePaymentStatus, changeStage, completeSpaces, resendPaymentLink, resendPaymentLinks, grantSpaces, importInterest, markJoinedPlatform, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
+import { changePaymentStatus, changeStage, completeSpaces, deleteMember, resendPaymentLink, resendPaymentLinks, grantSpaces, importInterest, markJoinedPlatform, normaliseEmail, openPayments, type PaymentChange } from "@/lib/members";
 import { SETTING_FIELDS, getMembershipPrice, saveSettings, type Settings } from "@/lib/settings";
 import { DEFAULT_PRICE_POUNDS, formatPounds, parsePounds } from "@/lib/price-format";
 import { pausedIds } from "@/lib/email/paused";
@@ -287,4 +288,18 @@ export async function resolveAlertAction(_prev: AdminState, formData: FormData):
     await db().alert.update({ where: { id: String(formData.get("id")) }, data: { resolvedAt: new Date() } });
     return "Marked as done.";
   });
+}
+
+/** Permanently delete a member (admins only), then go back to the dashboard. */
+export async function deleteMemberAction(_prev: AdminState, formData: FormData): Promise<AdminState> {
+  let notCancelled = 0;
+  const state = await guarded(async () => {
+    const staff = await requireAdminAction();
+    const r = await deleteMember(String(formData.get("id")), String(formData.get("confirmEmail") ?? ""), { staffId: staff.id, staffEmail: staff.email });
+    notCancelled = r.notCancelled;
+    return `${r.name} has been deleted.`;
+  }, true);
+  if (state.error) return state;
+  // Her page no longer exists, so leave it. redirect() must be called outside guarded's try/catch.
+  redirect(`/admin?deleted=${notCancelled ? "unsent" : "1"}`);
 }

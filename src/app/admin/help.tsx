@@ -226,6 +226,18 @@ export function MemberHelp({ isAdmin }: { isAdmin: boolean }) {
       <Part title="Giving back">
         <p>If they have offered to contribute (for example, as a mentor), it shows here. When you have paired them with someone, press <b>Mark mentor matched</b>. Press it again to undo.</p>
       </Part>
+      {isAdmin && (
+        <Part title="Deleting someone">
+          <ol>
+            <li>Scroll to the <b>Delete this person</b> box at the bottom and click <b>Delete this person</b> to open it.</li>
+            <li>Type their email address exactly as it is shown above the box. The button stays greyed out until it matches.</li>
+            <li>Press <b>Delete this person</b>, read the pop-up, then press <b>Delete for good</b>.</li>
+            <li>You go back to the dashboard, which says they have been deleted.</li>
+          </ol>
+          <p><b>This cannot be undone.</b> Their registration, payment details, notes and email history are removed, and any emails still waiting to go out to them are stopped. Payments recorded by hand and stage changes stay in the records.</p>
+          <p>If they still have a card membership running in Stripe, the site will ask you to cancel it in Stripe first (use <b>View her membership in Stripe ↗</b> in the Payment box), so they are not charged again. Deleting changes nothing on Mighty Networks, so remove them there yourself if they had joined.</p>
+        </Part>
+      )}
     </PageHelp>
   );
 }

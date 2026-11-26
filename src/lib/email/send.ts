@@ -73,6 +73,23 @@ async function deliver({ to, subject, blocks, logos: chosen = NO_LOGOS, files: c
   return data?.id ?? null;
 }
 
+/** Cancel emails Resend is holding to send later. Never throws: returns how many could not be cancelled. */
+export async function cancelScheduledEmails(resendIds: string[]): Promise<number> {
+  const r = resend();
+  if (!r) return 0;
+  let failed = 0;
+  for (const id of resendIds) {
+    try {
+      const { error } = await r.emails.cancel(id);
+      if (error) throw new Error(error.message);
+    } catch (e) {
+      failed++;
+      console.error(`[email] could not cancel scheduled email ${id}`, e);
+    }
+  }
+  return failed;
+}
+
 /**
  * Send one catalogue email to a member, at most once per (template, sendKey).
  * The email_log row is claimed first, so a repeated webhook or job run is a no-op.

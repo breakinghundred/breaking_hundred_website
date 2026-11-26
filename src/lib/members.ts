@@ -3,7 +3,7 @@ import { Prisma, type Member, type MemberStatus } from "@/generated/prisma/clien
 import { raiseAlert } from "./alerts";
 import { db } from "./db";
 import { DAY, renewalDateFor } from "./dates";
-import { sendMemberEmail } from "./email/send";
+import { cancelScheduledEmails, sendMemberEmail } from "./email/send";
 import {
   addToPrivateSpaces,
   findMemberByEmail,
@@ -456,4 +456,41 @@ export async function endMembership(member: Member) {
       error: e instanceof Error ? e.message : String(e),
     });
   }
+}
+
+/* ---------- Deleting a member (admins only) ---------- */
+
+/** Billing states where Stripe would keep charging her after we forgot her. */
+const LIVE_BILLING = new Set(["active", "payment_failed"]);
+
+/**
+ * Permanently delete a member. Her email history goes with her (it holds her address);
+ * hand-recorded payments and stage changes are kept as the team's audit trail, unlinked
+ * (onDelete: SetNull). Emails still waiting to go out are cancelled in Resend.
+ * Refused while a Stripe subscription can still charge her, and nothing changes on
+ * Stripe or Mighty Networks.
+ */
+export async function deleteMember(id: string, confirmEmail: string, by: { staffId: string; staffEmail: string }) {
+  const m = await db().member.findUnique({ where: { id } });
+  if (!m) throw new Error("Please refresh the page: this person has already been deleted.");
+  if (normaliseEmail(confirmEmail) !== m.email) throw new Error("Please type her email address exactly as shown to confirm.");
+  if (m.stripeSubscriptionId && m.subscriptionStatus && LIVE_BILLING.has(m.subscriptionStatus)) {
+    throw new Error(
+      "Please cancel her membership in Stripe first (use View her membership in Stripe in the Payment box), then wait a minute and try again. Otherwise Stripe would keep charging her.",
+    );
+  }
+
+  const now = new Date();
+  const pending = await db().emailLog.findMany({
+    where: { memberId: id, resendId: { not: null }, scheduledAt: { gt: now } },
+    select: { resendId: true },
+  });
+  const notCancelled = await cancelScheduledEmails(pending.map((e) => e.resendId!));
+
+  await db().$transaction([
+    db().emailLog.deleteMany({ where: { memberId: id } }),
+    db().member.delete({ where: { id } }),
+  ]);
+  console.info(`[admin] member ${id} deleted by ${by.staffEmail} (${by.staffId})`);
+  return { name: `${m.firstName} ${m.lastName}`.trim() || m.email, notCancelled };
 }

@@ -15,6 +15,7 @@ import { pausedIds } from "@/lib/email/paused";
 import { ActionForm } from "../../ActionForm";
 import { PaymentStatusForm } from "../../PaymentStatusForm";
 import { StageForm } from "../../StageForm";
+import { DeleteMemberForm } from "../../DeleteMemberForm";
 import { JoinedButton, SpacesButton } from "../../JoinedButton";
 import { memberAction } from "../../actions";
 import { newDraftAction } from "../../emails/mail-actions";
@@ -289,6 +290,19 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
               </div>
             )}
           </div>
+
+          {isAdmin && (
+            <div className="detail-card">
+              <h2>Delete this person</h2>
+              <p className="small muted">
+                Removes her from the site for good, for example a test sign-up, a duplicate, or someone who asked to have their details erased. This cannot be undone.
+              </p>
+              <details className="mini">
+                <summary>Delete this person</summary>
+                <DeleteMemberForm id={m.id} name={name || m.email} email={m.email} paid={paid || !!m.mnJoinedAt} />
+              </details>
+            </div>
+          )}
         </div>
       </div>
     </section>

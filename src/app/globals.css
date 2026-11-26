@@ -1244,7 +1244,7 @@ tr.email-off td:not(:last-child) { opacity: 0.55; }
 .confirm-dialog .button { min-height: 44px; padding: 10px 20px; }
 .confirm-dialog .button.outline { background: #fff; color: var(--wine); border: 1.5px solid var(--wine); }
 .confirm-dialog .button.outline:hover { color: #fff; border-color: var(--plum); }
-.confirm-dialog .button.danger { background: #a3243b; }
+.button.danger, .confirm-dialog .button.danger { background: #a3243b; }
 @media (max-width: 480px) { .confirm-actions .button { flex: 1 1 100%; } .confirm-actions { flex-direction: column-reverse; } }
 @media (prefers-reduced-motion: reduce) { .confirm-dialog[open] { animation: none; } }
 
